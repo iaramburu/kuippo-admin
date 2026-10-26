@@ -8,7 +8,8 @@ example `admin.kuippo.com`), apart from the customers' app (`kuippo-frontend`). 
 
 ## Security model (do not weaken it)
 - It signs in through Keycloak as the public client **`admin-console`** (authorization code with PKCE, no password grant). That
-  client is bound to the flow `browser-otp-required`, so the second factor is mandatory. Created by
+  client uses the realm's sign-in flow (`keycloak_setup.py mfa`): the second factor of the account is mandatory except on a trusted
+  device, unless an administrator switched it off (Funciones). Created by
   `kuippo-backend/deploy/admin/keycloak-setup.sh admin-console` (`keycloak_setup.py admin-console`; the client needs the `basic` scope
   so the access token has `sub`).
 - The API's administration only accepts tokens whose `azp` is `admin-console` (`requireClient`, `KUIPPO_ADMIN_CLIENT_ID`), and the

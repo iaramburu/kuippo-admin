@@ -5,7 +5,7 @@ interruptores de funciones, textos de los correos y el historial de cambios. Es 
 que Caddy sirve en su propia dirección (`admin.kuippo.com`), separada de la app de los clientes. No tiene backend propio: usa
 `/api/v1/admin/**` de `kuippo-backend`.
 
-El acceso es con contraseña **y** código de la aplicación de autenticación (cliente `admin-console` de Keycloak) y solo para
+El acceso es con contraseña **y** segundo factor (correo, app de autenticación o llave; cliente `admin-console` de Keycloak) y solo para
 cuentas con el rol `admin`. Detalles de seguridad y de lo que se administra en `CLAUDE.md`; puesta en marcha en el servidor en
 `kuippo-backend/deploy/README.md` (sección "Back office").
 
@@ -25,8 +25,8 @@ KC_URL=http://localhost:8180 KC_ADMIN=admin KC_ADMIN_PASSWORD=admin ADMIN_DEV_OR
   python ../kuippo-backend/deploy/admin/keycloak_setup.py admin-console
 ```
 
-y una cuenta con el rol `admin` (el mismo script con `admin`, con las variables `ADMIN_*` de su cabecera). La primera vez, Keycloak
-pide configurar la aplicación de autenticación.
+y una cuenta con el rol `admin` (el mismo script con `admin`, con las variables `ADMIN_*` de su cabecera). Para que pida el código
+por correo hay que haber lanzado también `keycloak_setup.py mfa` (ver `kuippo-backend/deploy/README.md`).
 
 ## Probar desde el móvil (HTTPS)
 
