@@ -3,6 +3,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
 import { AuthGate } from './auth/AuthGate';
+import { AutoUpdate } from './components/AutoUpdate';
 import { applyTheme, readTheme } from './lib/theme';
 import './index.css';
 
@@ -15,6 +16,7 @@ const queryClient = new QueryClient({ defaultOptions: { queries: { staleTime: 0,
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
+      <AutoUpdate />
       <AuthGate>
         <App />
       </AuthGate>

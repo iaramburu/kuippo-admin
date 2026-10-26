@@ -1,7 +1,33 @@
 import tailwindcss from '@tailwindcss/vite';
 import basicSsl from '@vitejs/plugin-basic-ssl';
 import react from '@vitejs/plugin-react';
+import { execSync } from 'node:child_process';
+import type { Plugin } from 'vite';
 import { defineConfig } from 'vitest/config';
+
+/** Which build this is: the commit in CI (so the same code is the same version), the moment of the build otherwise. */
+function buildVersion(): string {
+  if (process.env.APP_VERSION) return process.env.APP_VERSION;
+  try {
+    return execSync('git rev-parse --short HEAD', { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim() + (process.env.CI ? '' : `-${Date.now().toString(36)}`);
+  } catch {
+    return `build-${Date.now().toString(36)}`;
+  }
+}
+const VERSION = buildVersion();
+
+/**
+ * Writes /version.json: the version of this build. The open site reads it (a few bytes, never cached) to learn that a newer
+ * deployment exists, and reloads itself (lib/autoUpdate.ts).
+ */
+function versionFile(): Plugin {
+  return {
+    name: 'kuippo-version-file',
+    generateBundle() {
+      this.emitFile({ type: 'asset', fileName: 'version.json', source: JSON.stringify({ version: VERSION }) });
+    },
+  };
+}
 
 // `npm run dev:https` (mode "https") serves the site over HTTPS with a throw-away certificate and proxies the API and Keycloak
 // through the same origin: an HTTPS page may not call plain-HTTP services, and this lets the site be tried from another
@@ -11,7 +37,8 @@ const BACKEND = process.env.KUIPPO_BACKEND_URL ?? 'http://localhost:8080';
 const KEYCLOAK = process.env.KUIPPO_KEYCLOAK_URL ?? 'http://localhost:8180';
 
 export default defineConfig(({ mode }) => ({
-  plugins: [...(mode === 'https' ? [basicSsl()] : []), react(), tailwindcss()],
+  define: { __APP_VERSION__: JSON.stringify(VERSION) },
+  plugins: [...(mode === 'https' ? [basicSsl()] : []), react(), tailwindcss(), versionFile()],
   server: {
     port: 5174,
     // (development names that point to this PC through the hosts file, e.g. app.kuippo.local and admin.kuippo.local: with

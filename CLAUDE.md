@@ -56,6 +56,9 @@ kind of editor, a page here.
 - `VITE_API_BASE_URL` and `VITE_OIDC_AUTHORITY` default to the same host on ports 8080 and 8180 (production builds set them).
 - The deploy workflow is manual (`workflow_dispatch`): backend first, then this.
 
+## Updates
+The site updates itself when there is a new deployment, with no notice: the build writes `/version.json` (`vite.config.ts`, the commit in CI) and `components/AutoUpdate.tsx` + `lib/autoUpdate.ts` reload the page at a safe moment (on opening, coming back, moving to another section or leaving the tab; never after something was written on the section being viewed; once per version) when it differs from the running build. The session lives in the browser, so the person stays signed in. Caddy serves `/index.html` and `/version.json` with `no-cache`.
+
 ## Conventions
 - Spanish text for people; English code and comments. Pages are components rendered by `App` (never call a page as a function:
   its hooks would become the app's).
