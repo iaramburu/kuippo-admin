@@ -134,9 +134,9 @@ export const endAllSessions = async () => {
 export const exportAccountData = async () => (await request('/account/export')).blob();
 
 // ---- two-step verification
-/** Whether the second factor is asked at every sign-in of every account. */
+/** Whether the second factor is asked at the sign-ins of the customers' app (the administration's is always on). */
 export const fetchTwoStep = async () => (await get<{ twoStep: boolean }>('/admin/security')).twoStep;
-/** Switches it on or off for everybody (off: the password is enough, for when the e-mail with the code does not arrive). */
+/** Switches it on or off for the app (off: the password is enough there, for when the e-mail with the code does not arrive). */
 export const setTwoStep = async (twoStep: boolean) => (await send<{ twoStep: boolean }>('PUT', '/admin/security', { twoStep })).twoStep;
 
 // ---- geography (public)

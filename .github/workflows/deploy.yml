@@ -21,12 +21,11 @@ jobs:
           VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
           VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
           API_HOST: ${{ vars.KUIPPO_API_HOST }}
-          AUTH_HOST: ${{ vars.KUIPPO_AUTH_HOST }}
           ADMIN_HOST: ${{ vars.KUIPPO_ADMIN_HOST }}
         run: |
           missing=0
-          for name in VPS_HOST VPS_USER VPS_SSH_KEY VPS_KNOWN_HOSTS API_HOST AUTH_HOST ADMIN_HOST; do
-            if [ -z "${!name}" ]; then echo "::error::Missing $name (Settings > Environments > PROD; the hosts are the variables KUIPPO_API_HOST, KUIPPO_AUTH_HOST and KUIPPO_ADMIN_HOST)"; missing=1; fi
+          for name in VPS_HOST VPS_USER VPS_SSH_KEY VPS_KNOWN_HOSTS API_HOST ADMIN_HOST; do
+            if [ -z "${!name}" ]; then echo "::error::Missing $name (Settings > Environments > PROD; the hosts are the variables KUIPPO_API_HOST and KUIPPO_ADMIN_HOST)"; missing=1; fi
           done
           exit $missing
 

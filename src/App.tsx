@@ -1,7 +1,6 @@
 import { useEffect, type ReactNode } from 'react';
 import logo from './assets/kuippo_full.svg';
-import { useSessionUser } from './auth/AuthGate';
-import { signOut } from './auth/oidc';
+import { AccountMenu } from './components/AccountMenu';
 import { navigate, usePath } from './lib/router';
 import { CalendarPage } from './pages/CalendarPage';
 import { FlagsPage } from './pages/FlagsPage';
@@ -23,7 +22,7 @@ const SECTIONS: { path: string; label: string; view: () => ReactNode }[] = [
   { path: '/history', label: 'Historial', view: HistoryPage },
 ];
 
-// The administrator's own account and settings, like the customers' app has (apart from what is administered)
+// The administrator's own account and settings, like the customers' app has: not in the sections but in the menu of the header
 const PERSONAL: typeof SECTIONS = [
   { path: '/account', label: 'Cuenta', view: AccountPage },
   { path: '/settings', label: 'Configuración', view: SettingsPage },
@@ -31,7 +30,6 @@ const PERSONAL: typeof SECTIONS = [
 
 export default function App() {
   const path = usePath().replace(/\/+$/, '') || '/';
-  const user = useSessionUser();
   const section = [...SECTIONS, ...PERSONAL].find((s) => s.path === path);
   // A page is a component of its own (it has its own hooks): it is rendered, never called from here.
   const View = section?.view;
@@ -65,20 +63,8 @@ export default function App() {
       <header className="sticky top-0 z-20 flex items-center gap-3 border-b px-4 py-2 backdrop-blur-md" style={{ background: 'var(--app-header)', borderColor: 'var(--app-line)' }}>
         <img src={logo} alt="Kuippo" className="h-8 w-auto" />
         <span className="eyebrow hidden sm:inline">Administración</span>
-        <div className="ml-auto flex items-center gap-3 text-sm">
-          <a
-            href="/account"
-            onClick={(e) => {
-              e.preventDefault();
-              navigate('/account');
-            }}
-            className="hidden text-slate-600 hover:text-slate-900 hover:underline sm:inline"
-          >
-            {user?.profile.email}
-          </a>
-          <button type="button" onClick={() => void signOut()} className="rounded-xl border border-slate-300 bg-white px-3 py-1.5 font-medium text-slate-700 hover:bg-slate-50">
-            Cerrar sesión
-          </button>
+        <div className="ml-auto flex items-center gap-2">
+          <AccountMenu />
         </div>
         <span aria-hidden="true" className="brand-line absolute inset-x-0 bottom-0" />
       </header>
@@ -86,13 +72,11 @@ export default function App() {
         <aside className="sticky top-14 hidden h-[calc(100dvh-3.5rem)] w-60 shrink-0 overflow-y-auto border-r p-4 md:block" style={{ background: 'var(--app-surface)', borderColor: 'var(--app-line)' }}>
           <nav aria-label="Secciones" className="space-y-1">
             {SECTIONS.map((s) => link(s, false))}
-            <div role="separator" className="my-2 border-t" style={{ borderColor: 'var(--app-line)' }} />
-            {PERSONAL.map((s) => link(s, false))}
           </nav>
         </aside>
         <div className="min-w-0 flex-1">
           <nav aria-label="Secciones" className="flex gap-1 overflow-x-auto border-b px-4 py-2 md:hidden" style={{ background: 'var(--app-surface)', borderColor: 'var(--app-line)' }}>
-            {[...SECTIONS, ...PERSONAL].map((s) => link(s, true))}
+            {SECTIONS.map((s) => link(s, true))}
           </nav>
           <main>{View ? <View /> : null}</main>
         </div>
