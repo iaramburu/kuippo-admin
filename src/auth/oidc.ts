@@ -55,7 +55,7 @@ async function start(): Promise<User | null> {
       if (signedIn && !signedIn.expired) return signedIn;
       throw failure;
     } finally {
-      window.history.replaceState(null, '', '/');
+      window.history.replaceState(null, '', takeReturnPath() ?? '/');
     }
   }
   const user = await userManager.getUser();
@@ -63,6 +63,36 @@ async function start(): Promise<User | null> {
 }
 
 export const signIn = () => userManager.signinRedirect();
+
+/** Where the site goes once Keycloak sends the person back from an action (kept in sessionStorage, read once). */
+const RETURN_KEY = 'kuippo.admin.afterSignIn';
+
+function takeReturnPath(): string | null {
+  try {
+    const path = window.sessionStorage.getItem(RETURN_KEY);
+    window.sessionStorage.removeItem(RETURN_KEY);
+    return path && path.startsWith('/') ? path : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Sends the person to Keycloak to set up a second factor (kc_action: CONFIGURE_TOTP for an authenticator app, webauthn-register for a
+ * security key or biometrics) and brings them back to returnPath. The e-mail goes as the hint: Keycloak keeps one session per browser,
+ * shared with the customers' app, and without it the action would be done (and the password asked) for whichever account signed in
+ * there last.
+ */
+export async function setUpSecondFactor(action: 'CONFIGURE_TOTP' | 'webauthn-register', returnPath: string): Promise<void> {
+  try {
+    window.sessionStorage.setItem(RETURN_KEY, returnPath);
+  } catch {
+    // without it the person lands on the first section, which is only less convenient
+  }
+  const current = await userManager.getUser();
+  const email = typeof current?.profile.email === 'string' ? current.profile.email : undefined;
+  return userManager.signinRedirect({ extraQueryParams: { kc_action: action }, ...(email && { login_hint: email }) });
+}
 /**
  * Ends the session on the server (the refresh token goes to Keycloak's logout endpoint in the background, so no address has to be
  * allowed for it and no page of Keycloak is shown) and here, then starts again at the site, which leads to the sign-in.

@@ -7,7 +7,9 @@ import { CalendarPage } from './pages/CalendarPage';
 import { FlagsPage } from './pages/FlagsPage';
 import { HistoryPage } from './pages/HistoryPage';
 import { LimitsPage } from './pages/LimitsPage';
+import { AccountPage } from './pages/AccountPage';
 import { MailPage } from './pages/MailPage';
+import { SettingsPage } from './pages/SettingsPage';
 import { SocialSecurityPage } from './pages/SocialSecurityPage';
 import { UsersPage } from './pages/UsersPage';
 
@@ -21,10 +23,16 @@ const SECTIONS: { path: string; label: string; view: () => ReactNode }[] = [
   { path: '/history', label: 'Historial', view: HistoryPage },
 ];
 
+// The administrator's own account and settings, like the customers' app has (apart from what is administered)
+const PERSONAL: typeof SECTIONS = [
+  { path: '/account', label: 'Cuenta', view: AccountPage },
+  { path: '/settings', label: 'Configuración', view: SettingsPage },
+];
+
 export default function App() {
   const path = usePath().replace(/\/+$/, '') || '/';
   const user = useSessionUser();
-  const section = SECTIONS.find((s) => s.path === path);
+  const section = [...SECTIONS, ...PERSONAL].find((s) => s.path === path);
   // A page is a component of its own (it has its own hooks): it is rendered, never called from here.
   const View = section?.view;
 
@@ -58,7 +66,16 @@ export default function App() {
         <img src={logo} alt="Kuippo" className="h-8 w-auto" />
         <span className="eyebrow hidden sm:inline">Administración</span>
         <div className="ml-auto flex items-center gap-3 text-sm">
-          <span className="hidden text-slate-600 sm:inline">{user?.profile.email}</span>
+          <a
+            href="/account"
+            onClick={(e) => {
+              e.preventDefault();
+              navigate('/account');
+            }}
+            className="hidden text-slate-600 hover:text-slate-900 hover:underline sm:inline"
+          >
+            {user?.profile.email}
+          </a>
           <button type="button" onClick={() => void signOut()} className="rounded-xl border border-slate-300 bg-white px-3 py-1.5 font-medium text-slate-700 hover:bg-slate-50">
             Cerrar sesión
           </button>
@@ -69,11 +86,13 @@ export default function App() {
         <aside className="sticky top-14 hidden h-[calc(100dvh-3.5rem)] w-60 shrink-0 overflow-y-auto border-r p-4 md:block" style={{ background: 'var(--app-surface)', borderColor: 'var(--app-line)' }}>
           <nav aria-label="Secciones" className="space-y-1">
             {SECTIONS.map((s) => link(s, false))}
+            <div role="separator" className="my-2 border-t" style={{ borderColor: 'var(--app-line)' }} />
+            {PERSONAL.map((s) => link(s, false))}
           </nav>
         </aside>
         <div className="min-w-0 flex-1">
           <nav aria-label="Secciones" className="flex gap-1 overflow-x-auto border-b px-4 py-2 md:hidden" style={{ background: 'var(--app-surface)', borderColor: 'var(--app-line)' }}>
-            {SECTIONS.map((s) => link(s, true))}
+            {[...SECTIONS, ...PERSONAL].map((s) => link(s, true))}
           </nav>
           <main>{View ? <View /> : null}</main>
         </div>

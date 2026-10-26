@@ -97,3 +97,49 @@ export interface ManagedUserPayload {
   enabled: boolean;
   password?: string;
 }
+
+/** The signed-in account's own data (the same one the customers' app shows). */
+export interface Account {
+  firstName: string;
+  lastName: string;
+  email: string;
+  dni: string;
+  address: string;
+  postalCode: string;
+  provinceCode: string | null;
+  province: string;
+  locality: string;
+  phone: string;
+  country: string;
+}
+
+export interface AccountUpdate {
+  firstName: string;
+  lastName: string;
+  address: string;
+  postalCode: string;
+  provinceCode: string;
+  locality: string;
+  phone: string;
+}
+
+/** The second factor asked at a sign-in on a device that is not trusted. */
+export type MfaMethod = 'email' | 'totp' | 'webauthn';
+
+export interface Security {
+  method: MfaMethod;
+  appConfigured: boolean;
+  keyConfigured: boolean;
+  trustedDevices: number;
+}
+
+/** A sign-in that is open on some device. */
+export interface LoginSession {
+  id: string;
+  ip: string;
+  startedAt: string;
+  lastAccess: string;
+  clients: string[];
+  /** The session of the device that asks. */
+  current: boolean;
+}

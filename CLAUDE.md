@@ -26,6 +26,9 @@ teal), mounted in the Keycloak container and selected per client with the attrib
 for `admin-console` and `grafana`, `kuippo` for the app). If `public/favicon.svg` changes, regenerate `theme-admin/login/resources/img/favicon.ico`
 (Keycloak only takes `.ico`). In production Keycloak caches themes: restart the container after editing them.
 
+## The administrator's own account
+**Cuenta** and **Configuración** (below the sections, and the e-mail in the header leads to Cuenta) are the account and settings of the customers' app, for the administrator who is signed in: `pages/AccountPage.tsx` (personal data, password, second factor with its method, trusted devices and set-up of the app or key, open sessions, copy of the data; **not** deleting the account) over `/api/v1/account/**`, which every role uses and which accepts this site's tokens, and `pages/SettingsPage.tsx` (the theme, `lib/theme.ts`, applied in `main.tsx` before the first render because the CSP allows no inline script). Setting up an app or key goes to Keycloak with `kc_action` and the account's e-mail as `login_hint` (`setUpSecondFactor`, back to `/account`). Keycloak keeps one session per browser and realm, shared with the app: the hint makes the action ask for *this* account instead of taking the other one's identity.
+
 ## What it manages (all through `/api/v1/admin/**`)
 - **Usuarios**: accounts and roles (data lives in Keycloak).
 - **Seguridad Social**: the RETA bracket tables by year (`PUT /admin/social-security/{year}` replaces the whole table; the API and

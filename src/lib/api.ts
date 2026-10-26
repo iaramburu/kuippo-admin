@@ -1,12 +1,17 @@
 import { userManager } from '../auth/oidc';
 import type {
+  Account,
+  AccountUpdate,
   AuditEntry,
   BracketRow,
   BracketYear,
+  LoginSession,
   ManagedUser,
   ManagedUserPage,
   ManagedUserPayload,
+  MfaMethod,
   Parameter,
+  Security,
 } from './types';
 
 // Served over HTTPS (`npm run dev:https`) the dev server proxies the API, so it is reached on the same origin.
@@ -104,6 +109,29 @@ export const setUserPassword = async (id: string, newPassword: string) => {
 export const revokeAllSessions = async () => {
   await request('/admin/sessions/revoke', { method: 'POST' });
 };
+
+// ---- the account of whoever is signed in (the same calls as the customers' app)
+export const fetchAccount = () => get<Account>('/account');
+export const updateAccount = (payload: AccountUpdate) => send<Account>('PUT', '/account', payload);
+export const changePassword = async (currentPassword: string, newPassword: string) => {
+  await request('/account/password', { method: 'POST', body: JSON.stringify({ currentPassword, newPassword }) });
+};
+export const fetchSecurity = () => get<Security>('/account/security');
+/** Chooses the second factor; the password is asked again. */
+export const setMfaMethod = (method: MfaMethod, password: string) => send<Security>('PUT', '/account/security/method', { method, password });
+export const forgetTrustedDevices = async () => {
+  await request('/account/security/trusted-devices', { method: 'DELETE' });
+};
+export const fetchSessions = () => get<LoginSession[]>('/account/sessions');
+export const closeSession = async (id: string) => {
+  await request(`/account/sessions/${encodeURIComponent(id)}`, { method: 'DELETE' });
+};
+/** Ends every session of the account, on every device. */
+export const endAllSessions = async () => {
+  await request('/account/sessions/end', { method: 'POST', body: '{}' });
+};
+/** A copy of what is stored about the account. */
+export const exportAccountData = async () => (await request('/account/export')).blob();
 
 // ---- two-step verification
 /** Whether the second factor is asked at every sign-in of every account. */
