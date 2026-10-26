@@ -12,11 +12,17 @@ const SessionContext = createContext<User | null>(null);
 export const useSessionUser = () => useContext(SessionContext);
 
 function Shell({ children }: { children: ReactNode }) {
+  // The same page as the customers' app sign-in (logo, the gradient line on top, a narrow column), so the step to
+  // Keycloak's own page, which has the same look, does not feel like another site.
   return (
-    <main className="mx-auto flex min-h-dvh max-w-sm flex-col items-center justify-center gap-4 px-4 text-center">
-      <img src={logo} alt="Kuippo" className="h-10 w-auto" />
-      <span aria-hidden="true" className="brand-line w-full rounded-full" />
-      {children}
+    <main className="grid min-h-dvh place-items-center p-6">
+      <span aria-hidden="true" className="brand-line fixed inset-x-0 top-0" />
+      <div className="w-full max-w-sm space-y-4 text-center">
+        <h1 className="flex justify-center">
+          <img src={logo} alt="Kuippo" className="h-16 w-auto" />
+        </h1>
+        {children}
+      </div>
     </main>
   );
 }
@@ -51,7 +57,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
   if (state === 'anonymous')
     return (
       <Shell>
-        <h1 className="text-lg font-semibold">Administración de Kuippo</h1>
+        <p className="text-lg font-semibold">Administración</p>
         <p className="text-sm text-slate-600">El acceso pide tu contraseña y el código de tu aplicación de autenticación.</p>
         <Button onClick={() => void signIn()}>Entrar</Button>
       </Shell>

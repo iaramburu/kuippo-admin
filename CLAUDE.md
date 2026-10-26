@@ -17,6 +17,12 @@ example `admin.kuippo.com`), apart from the customers' app (`kuippo-frontend`). 
 - Caddy serves it with a strict CSP (`default-src 'none'`, `script-src 'self'`, `connect-src` only the API and Keycloak): **no inline
   scripts**, no third-party scripts or fonts. Optionally restricted by address (`ADMIN_ALLOWED_IPS`).
 
+## Sign-in look
+The landing page (`AuthGate`) and Keycloak's own page look like the customers' app sign-in. The Keycloak side is a theme,
+`kuippo-backend/deploy/keycloak/theme/login` (child of `keycloak.v2`: only CSS, the logo and two message fixes), mounted in the
+Keycloak container and selected per client with the attribute `login_theme` (set by `keycloak_setup.py` for `admin-console` and
+`grafana`). In production Keycloak caches themes: restart the container after editing it.
+
 ## What it manages (all through `/api/v1/admin/**`)
 - **Usuarios**: accounts and roles (data lives in Keycloak).
 - **Seguridad Social**: the RETA bracket tables by year (`PUT /admin/social-security/{year}` replaces the whole table; the API and
