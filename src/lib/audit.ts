@@ -7,6 +7,7 @@ const ACTIONS: Record<string, string> = {
   create: 'creó',
   update: 'modificó',
   password: 'cambió la contraseña de',
+  'revoke-sessions': 'cerró todas las sesiones',
 };
 
 export const SCOPES: Record<string, string> = {
@@ -16,11 +17,13 @@ export const SCOPES: Record<string, string> = {
   mail: 'Plantillas de correo',
   'social-security': 'Seguridad Social',
   users: 'Usuarios',
+  security: 'Seguridad',
 };
 
 /** "ana@x.com cambió Límites · Uso general de la API", with the title of the setting when it is known. */
 export function describeEntry(entry: AuditEntry, parameters: Parameter[]): string {
   const action = ACTIONS[entry.action] ?? entry.action;
+  if (entry.action === 'revoke-sessions') return `${entry.actorEmail || 'Alguien'} ${entry.scope === 'users' ? 'cerró las sesiones de una cuenta' : action}`;
   const scope = SCOPES[entry.scope] ?? entry.scope;
   let what = scope;
   if (entry.scope === 'social-security') what = `${scope} · tabla de ${entry.key}`;

@@ -6,14 +6,13 @@ import { setSessionLostHandler } from '../lib/api';
 import { isAdmin } from './claims';
 import { initAuth, signIn, signOut, userManager } from './oidc';
 
-type State = 'loading' | 'anonymous' | 'forbidden' | 'failed' | 'ready';
+type State = 'loading' | 'redirecting' | 'forbidden' | 'failed' | 'ready';
 
 const SessionContext = createContext<User | null>(null);
 export const useSessionUser = () => useContext(SessionContext);
 
 function Shell({ children }: { children: ReactNode }) {
-  // The same page as the customers' app sign-in (logo, the gradient line on top, a narrow column), so the step to
-  // Keycloak's own page, which has the same look, does not feel like another site.
+  // The same page as the customers' app (logo, the gradient line on top, a narrow column)
   return (
     <main className="grid min-h-dvh place-items-center p-6">
       <span aria-hidden="true" className="brand-line fixed inset-x-0 top-0" />
@@ -27,14 +26,26 @@ function Shell({ children }: { children: ReactNode }) {
   );
 }
 
-/** Nothing of the back office is shown until there is a session of an administrator. */
+/**
+ * Nothing of the admin site is shown until there is a session of an administrator. Without a session the person goes straight to
+ * Keycloak's sign-in page (there is no page of our own to click through); with one, any address (/login included) leads into the
+ * site. Only a failure to sign in, or an account that is not an administrator, shows a page here.
+ */
 export function AuthGate({ children }: { children: ReactNode }) {
   const [state, setState] = useState<State>('loading');
   const [user, setUser] = useState<User | null>(null);
 
+  const toKeycloak = () => {
+    setState('redirecting');
+    // /login is where the site is while it leaves for Keycloak's page, and where somebody without a session lands
+    window.history.replaceState(null, '', '/login');
+    signIn().catch(() => setState('failed'));
+  };
+
   const accept = (next: User | null) => {
     setUser(next);
-    setState(!next ? 'anonymous' : isAdmin(next.access_token) ? 'ready' : 'forbidden');
+    if (!next) toKeycloak();
+    else setState(isAdmin(next.access_token) ? 'ready' : 'forbidden');
   };
 
   useEffect(() => {
@@ -44,29 +55,35 @@ export function AuthGate({ children }: { children: ReactNode }) {
     userManager.events.addUserLoaded(renewed);
     setSessionLostHandler(() => accept(null));
     return () => userManager.events.removeUserLoaded(renewed);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  if (state === 'loading') return <Shell><p className="text-sm text-slate-500">Cargando…</p></Shell>;
+  if (state === 'loading' || state === 'redirecting')
+    return (
+      <Shell>
+        <p role="status" className="text-sm text-slate-500">
+          {state === 'redirecting' ? 'Abriendo el acceso…' : 'Cargando…'}
+        </p>
+      </Shell>
+    );
   if (state === 'failed')
     return (
       <Shell>
-        <p role="alert" className="text-sm text-red-700">No se pudo completar el acceso.</p>
-        <Button onClick={() => void signIn()}>Intentarlo de nuevo</Button>
-      </Shell>
-    );
-  if (state === 'anonymous')
-    return (
-      <Shell>
-        <p className="text-lg font-semibold">Administración</p>
-        <p className="text-sm text-slate-600">El acceso pide tu contraseña y el código de tu aplicación de autenticación.</p>
-        <Button onClick={() => void signIn()}>Entrar</Button>
+        <p role="alert" className="text-sm text-red-700">
+          No se pudo completar el acceso.
+        </p>
+        <Button onClick={toKeycloak}>Intentarlo de nuevo</Button>
       </Shell>
     );
   if (state === 'forbidden')
     return (
       <Shell>
-        <p role="alert" className="text-sm text-red-700">Esta cuenta no es administradora.</p>
-        <Button variant="secondary" onClick={() => void signOut()}>Cerrar sesión</Button>
+        <p role="alert" className="text-sm text-red-700">
+          Esta cuenta no es administradora.
+        </p>
+        <Button variant="secondary" onClick={() => void signOut()}>
+          Cerrar sesión
+        </Button>
       </Shell>
     );
   return <SessionContext.Provider value={user}>{children}</SessionContext.Provider>;

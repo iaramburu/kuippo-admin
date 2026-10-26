@@ -87,8 +87,18 @@ export const fetchUsers = (search: string, page: number, size = 20) =>
   get<ManagedUserPage>(`/admin/users?page=${page}&size=${size}${search ? `&search=${encodeURIComponent(search)}` : ''}`);
 export const createUser = (payload: ManagedUserPayload) => send<ManagedUser>('POST', '/admin/users', payload);
 export const updateUser = (id: string, payload: ManagedUserPayload) => send<ManagedUser>('PUT', `/admin/users/${id}`, payload);
+/** Ends every session of one account: it has to sign in again on all its devices. */
+export const closeUserSessions = async (id: string) => {
+  await request(`/admin/users/${id}/sessions/revoke`, { method: 'POST' });
+};
 export const setUserPassword = async (id: string, newPassword: string) => {
   await request(`/admin/users/${id}/password`, { method: 'POST', body: JSON.stringify({ newPassword }) });
+};
+
+// ---- sessions
+/** Ends every session of every account (the administrator's own included). */
+export const revokeAllSessions = async () => {
+  await request('/admin/sessions/revoke', { method: 'POST' });
 };
 
 // ---- geography (public)

@@ -26,7 +26,7 @@ function Entry({ entry, title }: { entry: AuditEntry; title: string }) {
           {formatDateTime(entry.at)}
         </time>
       </div>
-      {entry.scope !== 'users' && (
+      {entry.scope !== 'users' && entry.scope !== 'security' && (
         <p className="break-words text-xs text-slate-600">
           Antes: {summarize(entry.before)}
           <br />

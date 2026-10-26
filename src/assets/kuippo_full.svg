@@ -7,7 +7,7 @@
       }
 
       .cls-2 {
-        fill: #1e778f;
+        fill: #8f4c86;
       }
     </style>
     <linearGradient id="Degradado_sin_nombre_34" data-name="Degradado sin nombre 34" x1="500" y1="936.4497" x2="500" y2="0" gradientUnits="userSpaceOnUse">
@@ -16,7 +16,7 @@
       <stop offset=".65" stop-color="#1e778f"/>
     </linearGradient>
   </defs>
-  <g id="Logo_full_big" data-name="Logo full big">
+  <g id="Logo_full_big_morado" data-name="Logo full big morado">
     <path id="Logo_letra" data-name="Logo letra" class="cls-1" d="M1000,936.4497h-405.6009l-246.9319-242.6632-220.8733,223.2682-126.594-2.8232L778.9709,126.8143h-131.2429L0,780.934V0l283.247,277.9529-64.4243,65.6519-126.8405-124.4695v338.1833L609.3627,34.8321h389.9898l-452.887,457.7975,453.5345,443.8201ZM632.0308,844.4674h142.46l-292.7153-286.4452-69.6183,70.3724,219.8735,216.0728Z"/>
     <g>
       <path class="cls-2" d="M1006.4154,475.9862l167.041,200.5605h-95.5322l-145.8115-180.4492v180.4492h-78.7715v-394.418h78.7715v177.0977l146.3701-177.0977h94.9736l-167.041,193.8574Z"/>

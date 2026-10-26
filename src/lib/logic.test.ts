@@ -93,6 +93,14 @@ describe('audit and claims', () => {
     expect(describeEntry({ ...entry, scope: 'social-security', key: '2027' }, [])).toBe('ana@kuippo.com cambió Seguridad Social · tabla de 2027');
     expect(describeEntry({ ...entry, scope: 'users', action: 'password' }, [])).toBe('ana@kuippo.com cambió la contraseña de una cuenta');
   });
+  it('says who closed every session', () => {
+    const revoked = { ...entry, action: 'revoke-sessions', scope: 'security', key: 'revoked-before' };
+    expect(describeEntry(revoked, [])).toBe('ana@kuippo.com cerró todas las sesiones');
+  });
+  it('says whose sessions were closed', () => {
+    const one = { ...entry, action: 'revoke-sessions', scope: 'users', key: 'some-id' };
+    expect(describeEntry(one, [])).toBe('ana@kuippo.com cerró las sesiones de una cuenta');
+  });
   it('summarizes values', () => {
     expect(summarize(null)).toMatch(/por defecto/);
     expect(summarize([1, 2, 3])).toBe('3 elementos');

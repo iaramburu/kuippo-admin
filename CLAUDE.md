@@ -13,15 +13,17 @@ example `admin.kuippo.com`), apart from the customers' app (`kuippo-frontend`). 
   so the access token has `sub`).
 - The API's administration only accepts tokens whose `azp` is `admin-console` (`requireClient`, `KUIPPO_ADMIN_CLIENT_ID`), and the
   role `admin`. A token the app obtained with just a password is refused there (403).
-- The session lives in `sessionStorage` (closing the tab signs out). `AuthGate` shows nothing until there is an administrator.
+- The session lives in `localStorage` and is renewed with the refresh token while Keycloak's session lives (30 minutes without use, a year if the person ticked *Confío en este dispositivo* on Keycloak's page). `AuthGate` shows nothing until there is an administrator. **Usuarios > Sesiones** closes every session of every account (`POST /admin/sessions/revoke`), the administrator's own included. Each row of **Usuarios** has "Cerrar sesiones" for one account (`POST /admin/users/{id}/sessions/revoke`).
 - Caddy serves it with a strict CSP (`default-src 'none'`, `script-src 'self'`, `connect-src` only the API and Keycloak): **no inline
   scripts**, no third-party scripts or fonts. Optionally restricted by address (`ADMIN_ALLOWED_IPS`).
 
 ## Sign-in look
-The landing page (`AuthGate`) and Keycloak's own page look like the customers' app sign-in. The Keycloak side is a theme,
-`kuippo-backend/deploy/keycloak/theme/login` (child of `keycloak.v2`: only CSS, the logo and two message fixes), mounted in the
-Keycloak container and selected per client with the attribute `login_theme` (set by `keycloak_setup.py` for `admin-console` and
-`grafana`). In production Keycloak caches themes: restart the container after editing it.
+There is no sign-in page of our own: `AuthGate` sends whoever has no session straight to Keycloak's page (and an address such as `/login` with a session leads into the site, like in the app); it only shows a page when the sign-in fails or the account is not an administrator. Keycloak's own page looks like the customers' app sign-in. The Keycloak side is a theme,
+`kuippo-backend/deploy/keycloak/theme/login` (child of `keycloak.v2`: only CSS, the logo and two message fixes), with a child for the
+admin site, `theme-admin` (theme `kuippo-admin`: the same with **this site's favicon**, purple, made from `public/favicon.svg`; the app's is
+teal), mounted in the Keycloak container and selected per client with the attribute `login_theme` (set by `keycloak_setup.py`: `kuippo-admin`
+for `admin-console` and `grafana`, `kuippo` for the app). If `public/favicon.svg` changes, regenerate `theme-admin/login/resources/img/favicon.ico`
+(Keycloak only takes `.ico`). In production Keycloak caches themes: restart the container after editing them.
 
 ## What it manages (all through `/api/v1/admin/**`)
 - **Usuarios**: accounts and roles (data lives in Keycloak).

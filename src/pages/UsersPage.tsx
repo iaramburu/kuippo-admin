@@ -1,7 +1,9 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Button, errorText, Field, formatDateTime, inputClass, Notice, Page, Panel, useAction } from '../components/ui';
-import { createUser, fetchMunicipalities, fetchProvinces, fetchUsers, setUserPassword, updateUser } from '../lib/api';
+import { userManager } from '../auth/oidc';
+import { useSessionUser } from '../auth/AuthGate';
+import { closeUserSessions, createUser, fetchMunicipalities, fetchProvinces, fetchUsers, revokeAllSessions, setUserPassword, updateUser } from '../lib/api';
 import type { ManagedUser, ManagedUserPayload } from '../lib/types';
 
 const ROLES: { id: string; label: string; hint: string }[] = [
@@ -17,6 +19,65 @@ const payloadOf = (u: ManagedUser): ManagedUserPayload => ({
 });
 
 const fullName = (u: ManagedUser) => [u.firstName, u.lastName].filter(Boolean).join(' ') || u.email;
+
+/** Closes every session of every account: for a lost phone, a leaked password, or when roles must apply at once. */
+function SessionsPanel() {
+  const action = useAction();
+  const revoke = () => {
+    if (
+      !window.confirm(
+        'Se cerrarán TODAS las sesiones de TODOS los usuarios, incluida la tuya: tendrán que volver a entrar, también quien tenga marcado «Confío en este dispositivo». ¿Continuar?',
+      )
+    )
+      return;
+    void action.run(async () => {
+      await revokeAllSessions();
+      // This session is among the closed ones: remove it here too and go back to the start
+      await userManager.removeUser();
+      window.setTimeout(() => window.location.assign('/'), 1500);
+    }, 'Todas las sesiones están cerradas. Volverás a la pantalla de entrada.');
+  };
+  return (
+    <Panel
+      title="Sesiones"
+      subtitle="Quien marca «Confío en este dispositivo» no vuelve a escribir su contraseña durante meses. Aquí se cierran todas las sesiones de golpe."
+    >
+      <div className="flex flex-wrap items-center gap-2">
+        <Button variant="danger" disabled={action.busy} onClick={revoke}>
+          Cerrar todas las sesiones
+        </Button>
+        <Notice message={action.message} />
+      </div>
+    </Panel>
+  );
+}
+
+/** "Cerrar sesiones" of one account: it signs in again on all its devices, also when it ticked "Confío en este dispositivo". */
+function CloseSessionsButton({ user }: { user: ManagedUser }) {
+  const action = useAction();
+  const me = useSessionUser();
+  const own = me?.profile.sub === user.id;
+  const close = () => {
+    const who = fullName(user);
+    const warning = own ? ' Es tu propia cuenta: tendrás que volver a entrar.' : '';
+    if (!window.confirm(`Se cerrarán todas las sesiones de ${who}, en todos sus dispositivos. Tendrá que volver a entrar.${warning} ¿Continuar?`)) return;
+    void action.run(async () => {
+      await closeUserSessions(user.id);
+      if (own) {
+        await userManager.removeUser();
+        window.setTimeout(() => window.location.assign('/'), 1200);
+      }
+    }, `Sesiones de ${who} cerradas.`);
+  };
+  return (
+    <>
+      <Button variant="secondary" aria-label={`Cerrar las sesiones de ${fullName(user)}`} disabled={action.busy} onClick={close}>
+        Cerrar sesiones
+      </Button>
+      {action.message && <span role={action.message.kind === 'error' ? 'alert' : 'status'} className={`text-xs ${action.message.kind === 'error' ? 'text-red-700' : 'text-green-700'}`}>{action.message.kind === 'error' ? action.message.text : 'Sesiones cerradas'}</span>}
+    </>
+  );
+}
 
 function PasswordForm({ user, onClose }: { user: ManagedUser; onClose: () => void }) {
   const [password, setPassword] = useState('');
@@ -194,6 +255,7 @@ export function UsersPage() {
                         <Button variant="secondary" aria-label={`Contraseña de ${fullName(u)}`} onClick={() => { setEditing(null); setPasswordOf(u); }}>
                           Contraseña
                         </Button>
+                        <CloseSessionsButton user={u} />
                       </div>
                     </td>
                   </tr>
@@ -223,6 +285,8 @@ export function UsersPage() {
           </div>
         )}
       </Panel>
+
+      <SessionsPanel />
 
       {editing && <UserForm key={editing === 'new' ? 'new' : editing.id} user={editing === 'new' ? null : editing} onClose={() => setEditing(null)} />}
       {passwordOf && <PasswordForm key={passwordOf.id} user={passwordOf} onClose={() => setPasswordOf(null)} />}

@@ -2,7 +2,8 @@ import { UserManager, WebStorageStateStore, type User } from 'oidc-client-ts';
 
 // The back office signs in through Keycloak's own page (authorization code with PKCE), as the client "admin-console".
 // That client is bound to a sign-in flow that demands the second factor, and it is the only one the API's administration
-// accepts. The session lives in the tab (sessionStorage): closing it signs out.
+// accepts. The session is kept in the browser (localStorage) and renewed with the refresh token while Keycloak's session lives: 30
+// minutes without use, or a year when the person ticked "I trust this device" on Keycloak's page.
 
 // Served over HTTPS (`npm run dev:https`) the dev server proxies Keycloak, so it is reached on the same origin, and the
 // endpoints are set here because the discovery document would advertise plain-HTTP addresses.
@@ -27,7 +28,7 @@ export const userManager = new UserManager({
   redirect_uri: window.location.origin + '/',
   post_logout_redirect_uri: window.location.origin + '/',
   scope: 'openid profile email',
-  userStore: new WebStorageStateStore({ store: window.sessionStorage }),
+  userStore: new WebStorageStateStore({ store: window.localStorage }),
   automaticSilentRenew: true,
 });
 
@@ -45,13 +46,42 @@ export function initAuth(): Promise<User | null> {
 async function start(): Promise<User | null> {
   const params = new URLSearchParams(window.location.search);
   if (params.has('code') && params.has('state')) {
-    const user = await userManager.signinCallback();
-    window.history.replaceState(null, '', '/');
-    return user ?? null;
+    try {
+      return (await userManager.signinCallback()) ?? null;
+    } catch (failure) {
+      // The Back button of the browser can land on the address of an earlier sign-in, whose code was already used: when there is a
+      // session the sign-in is done and nothing is wrong
+      const signedIn = await userManager.getUser();
+      if (signedIn && !signedIn.expired) return signedIn;
+      throw failure;
+    } finally {
+      window.history.replaceState(null, '', '/');
+    }
   }
   const user = await userManager.getUser();
   return user && !user.expired ? user : null;
 }
 
 export const signIn = () => userManager.signinRedirect();
-export const signOut = () => userManager.signoutRedirect();
+/**
+ * Ends the session on the server (the refresh token goes to Keycloak's logout endpoint in the background, so no address has to be
+ * allowed for it and no page of Keycloak is shown) and here, then starts again at the site, which leads to the sign-in.
+ */
+export async function signOut(): Promise<void> {
+  const user = await userManager.getUser();
+  try {
+    const { end_session_endpoint } = await userManager.metadataService.getMetadata();
+    if (user?.refresh_token && end_session_endpoint) {
+      await fetch(end_session_endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ client_id: userManager.settings.client_id, refresh_token: user.refresh_token }),
+      });
+    }
+  } catch (failure) {
+    // the local session is removed regardless
+    console.warn('Sign-out: the session could not be ended on the server', failure);
+  }
+  await userManager.removeUser();
+  window.location.assign('/');
+}
