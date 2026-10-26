@@ -1,0 +1,80 @@
+name: Deploy admin to VPS
+
+on:
+  # Manual only: Actions tab > "Deploy admin to VPS" > Run workflow. Deploy the backend first when the API changed.
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-admin
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    # The VPS secrets and variables live in this GitHub Environment (same names as in the other repositories).
+    environment: PROD
+    steps:
+      - name: Check deployment secrets
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+          API_HOST: ${{ vars.KUIPPO_API_HOST }}
+          AUTH_HOST: ${{ vars.KUIPPO_AUTH_HOST }}
+          ADMIN_HOST: ${{ vars.KUIPPO_ADMIN_HOST }}
+        run: |
+          missing=0
+          for name in VPS_HOST VPS_USER VPS_SSH_KEY VPS_KNOWN_HOSTS API_HOST AUTH_HOST ADMIN_HOST; do
+            if [ -z "${!name}" ]; then echo "::error::Missing $name (Settings > Environments > PROD; the hosts are the variables KUIPPO_API_HOST, KUIPPO_AUTH_HOST and KUIPPO_ADMIN_HOST)"; missing=1; fi
+          done
+          exit $missing
+
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - run: npm test
+
+      - name: Build
+        env:
+          VITE_API_BASE_URL: https://${{ vars.KUIPPO_API_HOST }}/api/v1
+          VITE_OIDC_AUTHORITY: https://${{ vars.KUIPPO_AUTH_HOST }}/realms/kuippo
+        run: npm run build
+
+      - name: Prepare SSH
+        env:
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          # Windows line endings and a missing last newline (typical of a secret pasted from a Windows editor) break the key
+          printf '%s\n' "$VPS_SSH_KEY" | tr -d '\r' > ~/.ssh/id_deploy && chmod 600 ~/.ssh/id_deploy
+          printf '%s\n' "$VPS_KNOWN_HOSTS" | tr -d '\r' > ~/.ssh/known_hosts
+          if ! ssh-keygen -y -f ~/.ssh/id_deploy > /dev/null 2>&1; then
+            echo "::error::VPS_SSH_KEY is not a valid OpenSSH private key (the whole key, from '-----BEGIN OPENSSH PRIVATE KEY-----' to '-----END OPENSSH PRIVATE KEY-----')."
+            exit 1
+          fi
+          printf 'Host vps\n  HostName %s\n  User %s\n  Port %s\n  IdentityFile ~/.ssh/id_deploy\n  StrictHostKeyChecking yes\n' \
+            "${{ secrets.VPS_HOST }}" "${{ secrets.VPS_USER }}" "${{ secrets.VPS_PORT || '22' }}" > ~/.ssh/config
+
+      # Hashed files first, the page last, so nobody gets a page whose script is missing.
+      - name: Upload
+        run: |
+          rsync -az dist/assets/ vps:/srv/kuippo/admin/assets/
+          rsync -az --delete --exclude=/assets dist/ vps:/srv/kuippo/admin/
+
+      # The page answers (unless ADMIN_ALLOWED_IPS keeps GitHub out, then it is a 404 here and that is fine), and what
+      # does not exist is a 404, never the page.
+      - name: Smoke test
+        run: |
+          base="https://${{ vars.KUIPPO_ADMIN_HOST }}"
+          code=$(curl -s -o /dev/null -w '%{http_code}' --retry 5 --retry-delay 3 --retry-all-errors "$base/")
+          echo "/ -> $code"
+          case "$code" in 200|404) ;; *) echo "::error::/ answered $code"; exit 1;; esac
+          code=$(curl -s -o /dev/null -w '%{http_code}' "$base/.env")
+          [ "$code" = 404 ] || { echo "::error::/.env answered $code, not 404"; exit 1; }

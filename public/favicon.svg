@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Capa_2" data-name="Capa 2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: #1e778f;
+      }
+
+      .cls-2 {
+        fill: #ededed;
+      }
+    </style>
+  </defs>
+  <g id="Logo_square_monocromo" data-name="Logo square monocromo">
+    <rect class="cls-1" width="1000" height="1000" rx="220" ry="220"/>
+    <path id="Logo_letra" data-name="Logo letra" class="cls-2" d="M810,790.2994h-251.4725l-153.0978-150.4512-136.9415,138.4263-78.4882-1.7504,482.962-488.1986h-81.3706l-401.5913,405.5542V209.7006l175.6131,172.3308-39.943,40.7042-78.6411-77.1711v209.6737l320.7759-323.9417h241.7937l-280.7899,283.8344,281.1914,275.1685ZM581.8591,733.2704h88.3252l-181.4835-177.596-43.1633,43.6309,136.3216,133.9651Z"/>
+  </g>
+</svg>
