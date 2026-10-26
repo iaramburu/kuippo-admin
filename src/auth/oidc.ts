@@ -5,17 +5,19 @@ import { UserManager, WebStorageStateStore, type User } from 'oidc-client-ts';
 // accepts. The session is kept in the browser (localStorage) and renewed with the refresh token while Keycloak's session lives: 30
 // minutes without use, or a year when the person ticked "I trust this device" on Keycloak's page.
 
-// Served over HTTPS (`npm run dev:https`) the dev server proxies Keycloak, so it is reached on the same origin, and the
-// endpoints are set here because the discovery document would advertise plain-HTTP addresses.
-const proxiedByHttpsDevServer = !import.meta.env.VITE_OIDC_AUTHORITY && window.location.protocol === 'https:';
+// Served over HTTPS, in production (Caddy) and in development (`npm run dev:https`, the dev server), Keycloak is reached through the
+// site's own address, on the same origin. The browser keeps one Keycloak session per address, so this site has a session of its own
+// and does not take the identity of whoever is signed in to the customers' app (or the other way round). The endpoints are set here
+// because the discovery document could advertise another address.
+const sameOriginKeycloak = !import.meta.env.VITE_OIDC_AUTHORITY && window.location.protocol === 'https:';
 const authority =
   import.meta.env.VITE_OIDC_AUTHORITY ||
-  (proxiedByHttpsDevServer ? `${window.location.origin}/realms/kuippo` : `${window.location.protocol}//${window.location.hostname}:8180/realms/kuippo`);
+  (sameOriginKeycloak ? `${window.location.origin}/realms/kuippo` : `${window.location.protocol}//${window.location.hostname}:8180/realms/kuippo`);
 const openIdConnect = `${authority}/protocol/openid-connect`;
 
 export const userManager = new UserManager({
   authority,
-  ...(proxiedByHttpsDevServer && {
+  ...(sameOriginKeycloak && {
     metadata: {
       issuer: authority,
       authorization_endpoint: `${openIdConnect}/auth`,

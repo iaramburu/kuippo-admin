@@ -43,7 +43,8 @@ jobs:
       - name: Build
         env:
           VITE_API_BASE_URL: https://${{ vars.KUIPPO_API_HOST }}/api/v1
-          VITE_OIDC_AUTHORITY: https://${{ vars.KUIPPO_AUTH_HOST }}/realms/kuippo
+          # (no VITE_OIDC_AUTHORITY: over HTTPS the site reaches Keycloak through its own address, which Caddy proxies; the browser
+          # keeps one Keycloak session per address, so this site's is apart from the app's)
         run: npm run build
 
       - name: Prepare SSH
