@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Button, inputClass, Notice, Origin, Page, Panel, useAction } from '../components/ui';
+import { Button, errorText, inputClass, Notice, Origin, Page, Panel, useAction } from '../components/ui';
 import { checkRules, newRule, previewDeadlines } from '../lib/calendar';
 import { parametersOf, useParameters, useParameterWrites } from '../lib/queries';
 import type { CalendarRule, Parameter } from '../lib/types';
@@ -149,7 +149,7 @@ export function CalendarPage() {
   return (
     <Page title="Calendario fiscal" intro="Las fechas de presentación que la app enseña a los usuarios. Cámbialas cuando la Agencia Tributaria publique un calendario distinto.">
       {isPending && <p className="text-sm text-slate-500">Cargando…</p>}
-      {error && <Notice message={{ kind: 'error', text: 'No se pudo cargar el calendario.' }} />}
+      {error && <Notice message={{ kind: 'error', text: errorText(error) }} />}
       {rules && <Rules key={JSON.stringify(rules.value)} parameter={rules} />}
     </Page>
   );

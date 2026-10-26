@@ -1,4 +1,4 @@
-import { Notice, Origin, Page, Panel, useAction } from '../components/ui';
+import { errorText, Notice, Origin, Page, Panel, useAction } from '../components/ui';
 import { parametersOf, useParameters, useParameterWrites } from '../lib/queries';
 import type { Parameter } from '../lib/types';
 
@@ -44,7 +44,7 @@ export function FlagsPage() {
   return (
     <Page title="Funciones" intro="Interruptores para cerrar una función de la aplicación sin desplegar nada: por ejemplo, el alta de cuentas durante una incidencia, o la lectura de tickets si el servidor va justo de CPU.">
       {isPending && <p className="text-sm text-slate-500">Cargando…</p>}
-      {error && <Notice message={{ kind: 'error', text: 'No se pudieron cargar las funciones.' }} />}
+      {error && <Notice message={{ kind: 'error', text: errorText(error) }} />}
       {parametersOf(data, 'flags').map((p) => (
         <FlagCard key={p.key} parameter={p} />
       ))}

@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import { Button, inputClass, Notice, Page, Panel, useAction } from '../components/ui';
+import { Button, errorText, inputClass, Notice, Page, Panel, useAction } from '../components/ui';
 import { deleteBrackets, fetchBracketYears, fetchBrackets, saveBrackets } from '../lib/api';
 import { addBracket, checkBrackets, copyTable, relink } from '../lib/brackets';
 import type { BracketRow } from '../lib/types';
@@ -142,7 +142,7 @@ export function SocialSecurityPage() {
     <Page title="Seguridad Social" intro="La tabla de tramos de cotización de autónomos (RETA). La Seguridad Social publica una nueva cada año: crea la del año siguiente a partir de la actual y ajusta las cifras.">
       <Panel title="Tablas cargadas">
         {years.isPending && <p className="text-sm text-slate-500">Cargando…</p>}
-        {years.error && <Notice message={{ kind: 'error', text: 'No se pudieron cargar las tablas.' }} />}
+        {years.error && <Notice message={{ kind: 'error', text: errorText(years.error) }} />}
         <div className="flex flex-wrap items-end gap-2">
           {years.data?.map((item) => (
             <button

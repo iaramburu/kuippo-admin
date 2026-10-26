@@ -56,7 +56,10 @@ export function Notice({ message }: { message: Message }) {
 
 /** What an API call says when it fails, in words for the person using the page. */
 export function errorText(error: unknown): string {
-  if (error instanceof ApiError) return error.status === 403 ? 'Tu sesión no tiene permiso para esto. Vuelve a entrar.' : error.message;
+  if (error instanceof ApiError) {
+    if (error.status === 401) return 'El servidor no acepta tu sesión (401), aunque has entrado bien. Suele ser que la API no está al día o usa otro emisor o cliente de Keycloak.';
+    return error.status === 403 ? 'Tu sesión no tiene permiso para esto. Vuelve a entrar.' : error.message;
+  }
   return 'No se pudo conectar con el servidor. Inténtalo de nuevo.';
 }
 

@@ -42,6 +42,9 @@ kind of editor, a page here.
   `KC_URL=http://localhost:8180 KC_ADMIN=admin KC_ADMIN_PASSWORD=admin ADMIN_DEV_ORIGIN=http://localhost:5174 python ../kuippo-backend/deploy/admin/keycloak_setup.py admin-console`
   and an account with the role admin (`... keycloak_setup.py admin`, with the `ADMIN_*` variables). The first sign-in asks to set up
   an authenticator app.
+- `npm run dev:https` serves it over HTTPS (throw-away certificate) and proxies `/api`, `/realms` and `/resources` on the same origin, to try it
+  from a phone: see README (needs `KUIPPO_JWT_ANY_ISSUER_HOST=true` in the backend, `KC_PROXY_HEADERS=xforwarded` in the dev Keycloak and
+  the `https://<ip>:5174` address in `ADMIN_DEV_ORIGIN`). `auth/oidc.ts` and `lib/api.ts` switch to same-origin when the page is HTTPS.
 - `VITE_API_BASE_URL` and `VITE_OIDC_AUTHORITY` default to the same host on ports 8080 and 8180 (production builds set them).
 - The deploy workflow is manual (`workflow_dispatch`): backend first, then this.
 

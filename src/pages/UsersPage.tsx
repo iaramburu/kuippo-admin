@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import { Button, Field, formatDateTime, inputClass, Notice, Page, Panel, useAction } from '../components/ui';
+import { Button, errorText, Field, formatDateTime, inputClass, Notice, Page, Panel, useAction } from '../components/ui';
 import { createUser, fetchMunicipalities, fetchProvinces, fetchUsers, setUserPassword, updateUser } from '../lib/api';
 import type { ManagedUser, ManagedUserPayload } from '../lib/types';
 
@@ -166,7 +166,7 @@ export function UsersPage() {
         }
       >
         {users.isPending && <p className="text-sm text-slate-500">Cargando…</p>}
-        {users.error && <Notice message={{ kind: 'error', text: 'No se pudieron cargar las cuentas.' }} />}
+        {users.error && <Notice message={{ kind: 'error', text: errorText(users.error) }} />}
         {users.data && (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[40rem] text-sm">

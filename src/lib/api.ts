@@ -9,7 +9,9 @@ import type {
   Parameter,
 } from './types';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || `${window.location.protocol}//${window.location.hostname}:8080/api/v1`;
+// Served over HTTPS (`npm run dev:https`) the dev server proxies the API, so it is reached on the same origin.
+const API_BASE =
+  import.meta.env.VITE_API_BASE_URL || (window.location.protocol === 'https:' ? '/api/v1' : `${window.location.protocol}//${window.location.hostname}:8080/api/v1`);
 
 export class ApiError extends Error {
   constructor(
@@ -50,8 +52,10 @@ async function request(path: string, init: RequestInit = {}): Promise<Response> 
   let response = await send((await userManager.getUser())?.access_token);
   if (response.status === 401) {
     const renewed = await userManager.signinSilent().catch(() => null);
-    if (renewed) response = await send(renewed.access_token);
-    if (response.status === 401) onSessionLost();
+    // The session cannot be renewed: sign in again. When it can, and the API still refuses the new token, the session is fine
+    // and the API is the problem (another issuer or client configured, an old build): say so instead of throwing the person out.
+    if (!renewed) onSessionLost();
+    else response = await send(renewed.access_token);
   }
   if (!response.ok) throw await toError(response);
   return response;

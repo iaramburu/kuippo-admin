@@ -1,6 +1,6 @@
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import { Button, formatDateTime, inputClass, Notice, Page, Panel, useAction } from '../components/ui';
+import { Button, errorText, formatDateTime, inputClass, Notice, Page, Panel, useAction } from '../components/ui';
 import { fetchAudit, revertChange } from '../lib/api';
 import { describeEntry, SCOPES, summarize } from '../lib/audit';
 import { useParameters } from '../lib/queries';
@@ -75,7 +75,7 @@ export function HistoryPage() {
         }
       >
         {log.isPending && <p className="text-sm text-slate-500">Cargando…</p>}
-        {log.error && <Notice message={{ kind: 'error', text: 'No se pudo cargar el historial.' }} />}
+        {log.error && <Notice message={{ kind: 'error', text: errorText(log.error) }} />}
         {!log.isPending && entries.length === 0 && <p className="text-sm text-slate-500">Todavía no hay cambios.</p>}
         <ul className="divide-y divide-slate-200 text-sm">
           {entries.map((entry) => (

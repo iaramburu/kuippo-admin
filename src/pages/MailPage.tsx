@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button, Field, inputClass, Notice, Origin, Page, Panel, useAction } from '../components/ui';
+import { Button, errorText, Field, inputClass, Notice, Origin, Page, Panel, useAction } from '../components/ui';
 import { parametersOf, useParameters, useParameterWrites } from '../lib/queries';
 import type { MailText, Parameter } from '../lib/types';
 
@@ -60,7 +60,7 @@ export function MailPage() {
       intro="Los textos de los correos que envía Kuippo. Se comprueban antes de guardar: un texto que usara una variable que el correo no tiene, o que estuviera mal escrito, no se guarda."
     >
       {isPending && <p className="text-sm text-slate-500">Cargando…</p>}
-      {error && <Notice message={{ kind: 'error', text: 'No se pudieron cargar las plantillas.' }} />}
+      {error && <Notice message={{ kind: 'error', text: errorText(error) }} />}
       {parametersOf(data, 'mail').map((p) => (
         <Template key={`${p.key}-${JSON.stringify(p.value)}`} parameter={p} />
       ))}

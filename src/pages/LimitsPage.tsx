@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button, Field, inputClass, Notice, Origin, Page, Panel, useAction } from '../components/ui';
+import { Button, errorText, Field, inputClass, Notice, Origin, Page, Panel, useAction } from '../components/ui';
 import { checkRate, describeRate, joinEvery, splitEvery, type Unit } from '../lib/rates';
 import { parametersOf, useParameters, useParameterWrites } from '../lib/queries';
 import type { Parameter, RateValue } from '../lib/types';
@@ -67,7 +67,7 @@ export function LimitsPage() {
       intro="Cuántas peticiones admite cada parte de la API antes de decir «demasiadas peticiones». Un límite demasiado bajo molesta a las personas; uno demasiado alto deja de proteger. Los cambios se aplican en todos los servidores en unos segundos."
     >
       {isPending && <p className="text-sm text-slate-500">Cargando…</p>}
-      {error && <Notice message={{ kind: 'error', text: 'No se pudieron cargar los límites.' }} />}
+      {error && <Notice message={{ kind: 'error', text: errorText(error) }} />}
       {parametersOf(data, 'limits').map((p) => (
         <RateCard key={`${p.key}-${JSON.stringify(p.value)}`} parameter={p} />
       ))}
