@@ -4,9 +4,10 @@ import logo from '../assets/kuippo_full.svg';
 import { Button } from '../components/ui';
 import { setSessionLostHandler } from '../lib/api';
 import { isAdmin } from './claims';
+import { mayRedirectToKeycloak, SIGN_IN_STUCK_MESSAGE } from './loopGuard';
 import { initAuth, signIn, signOut, userManager } from './oidc';
 
-type State = 'loading' | 'redirecting' | 'forbidden' | 'failed' | 'ready';
+type State = 'loading' | 'redirecting' | 'forbidden' | 'failed' | 'stuck' | 'ready';
 
 const SessionContext = createContext<User | null>(null);
 export const useSessionUser = () => useContext(SessionContext);
@@ -44,7 +45,8 @@ export function AuthGate({ children }: { children: ReactNode }) {
 
   const accept = (next: User | null) => {
     setUser(next);
-    if (!next) toKeycloak();
+    // (by itself, not more than a few times in a minute: it would go round forever if Keycloak does not answer at this address)
+    if (!next) mayRedirectToKeycloak() ? toKeycloak() : setState('stuck');
     else setState(isAdmin(next.access_token) ? 'ready' : 'forbidden');
   };
 
@@ -71,6 +73,15 @@ export function AuthGate({ children }: { children: ReactNode }) {
       <Shell>
         <p role="alert" className="text-sm text-red-700">
           No se pudo completar el acceso.
+        </p>
+        <Button onClick={toKeycloak}>Intentarlo de nuevo</Button>
+      </Shell>
+    );
+  if (state === 'stuck')
+    return (
+      <Shell>
+        <p role="alert" className="text-sm text-red-700">
+          {SIGN_IN_STUCK_MESSAGE}
         </p>
         <Button onClick={toKeycloak}>Intentarlo de nuevo</Button>
       </Shell>
