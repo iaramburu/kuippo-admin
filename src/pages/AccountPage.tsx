@@ -17,7 +17,7 @@ import {
   setMfaMethod,
   updateAccount,
 } from '../lib/api';
-import { describeSession, exportFileName, lastUseText, MFA_METHODS, orderSessions, passwordProblem, trustedDevicesText } from '../lib/security';
+import { describeSession, exportFileName, lastUseText, methodStates, methodSummary, orderSessions, passwordProblem, trustedDevicesText } from '../lib/security';
 import type { Account, AccountUpdate, MfaMethod } from '../lib/types';
 
 const toForm = (a: Account): AccountUpdate => ({
@@ -163,7 +163,17 @@ function PasswordCard() {
   );
 }
 
-/** The second factor asked at a sign-in on a device that is not trusted: e-mail (the default), authenticator app or security key. */
+/** One word of state on a method: the default, set up, not set up. */
+function StatusBadge({ tone, children }: { tone: 'brand' | 'green' | 'slate'; children: string }) {
+  const classes = { brand: 'bg-brand-50 text-brand-700', green: 'bg-green-50 text-green-700', slate: 'bg-slate-100 text-slate-600' };
+  return <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${classes[tone]}`}>{children}</span>;
+}
+
+/**
+ * The second factor asked at a sign-in on a device that is not trusted. Each of the three methods says whether it is set up, whether it
+ * is the default (the one in use) and, if it can be used, that it can be chosen instead on the verification page when the default
+ * cannot be used. The default is chosen here, with the password asked again.
+ */
 function SecondFactorCard() {
   const client = useQueryClient();
   const security = useQuery({ queryKey: ['security'], queryFn: fetchSecurity });
@@ -172,15 +182,14 @@ function SecondFactorCard() {
   const action = useAction();
 
   const data = security.data;
-  const selected = chosen ?? data?.method ?? 'email';
-  const ready = (method: MfaMethod) => method === 'email' || (method === 'totp' ? data?.appConfigured : data?.keyConfigured);
+  const chosenState = data && chosen ? methodStates(data).find((s) => s.id === chosen) : undefined;
 
   const save = (method: MfaMethod) =>
     action.run(async () => {
       client.setQueryData(['security'], await setMfaMethod(method, password));
       setChosen(null);
       setPassword('');
-    }, 'Método de verificación cambiado.');
+    }, 'Método por defecto cambiado.');
   const forget = () =>
     action.run(async () => {
       await forgetTrustedDevices();
@@ -190,45 +199,56 @@ function SecondFactorCard() {
   return (
     <Panel
       title="Verificación en dos pasos"
-      subtitle="Al iniciar sesión en un dispositivo nuevo o que no es de confianza se pide, además de la contraseña, uno de estos códigos."
+      subtitle="Al iniciar sesión en un dispositivo nuevo o que no es de confianza se pide, además de la contraseña, un código con el método por defecto. En la administración siempre está activa."
     >
       {security.isPending && <p className="text-sm text-slate-500">Cargando…</p>}
       {security.isError && <Notice message={{ kind: 'error', text: errorText(security.error) }} />}
       {data && (
         <div className="space-y-3">
-          <fieldset className="space-y-2">
-            <legend className="sr-only">Método de verificación</legend>
-            {MFA_METHODS.map((m) => (
-              <div key={m.id} className="flex items-start gap-3 rounded-lg border border-slate-200 p-3">
-                <input id={`mfa-${m.id}`} type="radio" name="mfa-method" className="mt-1" checked={selected === m.id} disabled={!ready(m.id)} onChange={() => setChosen(m.id)} />
-                <div className="min-w-0 flex-1">
-                  <label htmlFor={`mfa-${m.id}`} className="block text-sm font-medium">
-                    {m.label}
-                    {data.method === m.id && <span className="ml-2 rounded-full bg-brand-50 px-2 py-0.5 text-xs font-normal text-brand-700">En uso</span>}
-                    {m.id === 'email' && data.method !== 'email' && <span className="ml-2 text-xs font-normal text-slate-500">(por defecto)</span>}
-                  </label>
-                  <p className="text-xs text-slate-500">{m.hint}</p>
+          <p className="text-sm text-slate-700">{methodSummary(data)}</p>
+          <ul className="space-y-2">
+            {methodStates(data).map((m) => (
+              <li key={m.id} className={`rounded-lg border p-3 ${m.isDefault ? 'border-brand-600' : 'border-slate-200'}`}>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-sm font-medium">{m.label}</span>
+                  {m.isDefault && <StatusBadge tone="brand">Por defecto</StatusBadge>}
+                  <StatusBadge tone={m.configured ? 'green' : 'slate'}>{m.configured ? 'Configurado' : 'No configurado'}</StatusBadge>
+                </div>
+                <p className="mt-1 text-xs text-slate-500">{m.hint}</p>
+                <p className={`mt-1 text-xs ${m.isDefault ? 'font-medium text-brand-700' : 'text-slate-600'}`}>{m.usage}</p>
+                <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+                  {m.configured && !m.isDefault && (
+                    <button type="button" onClick={() => { setChosen(m.id); setPassword(''); action.clear(); }} className="text-sm font-medium text-brand-700 underline">
+                      Usar por defecto
+                    </button>
+                  )}
                   {m.id !== 'email' && (
                     <button
                       type="button"
                       onClick={() => void setUpSecondFactor(m.id === 'totp' ? 'CONFIGURE_TOTP' : 'webauthn-register', '/account')}
-                      className="mt-1 text-sm font-medium text-brand-700 underline"
+                      className="text-sm font-medium text-brand-700 underline"
                     >
-                      {ready(m.id) ? 'Añadir otra' : m.id === 'totp' ? 'Configurar la app' : 'Registrar una llave o biometría'}
+                      {m.configured ? 'Añadir otra' : m.id === 'totp' ? 'Configurar la app' : 'Registrar una llave o biometría'}
                     </button>
                   )}
                 </div>
-              </div>
+              </li>
             ))}
-          </fieldset>
-          {chosen && chosen !== data.method && (
-            <div className="max-w-sm space-y-2">
+          </ul>
+          {chosenState && (
+            <div className="max-w-sm space-y-2 rounded-lg bg-slate-50 p-3">
+              <p className="text-sm">Vas a usar <strong>{chosenState.label}</strong> como método por defecto.</p>
               <Field label="Tu contraseña, para confirmar el cambio" htmlFor="mfa-password">
                 <input id="mfa-password" type="password" autoComplete="current-password" className={inputClass} value={password} onChange={(e) => setPassword(e.target.value)} />
               </Field>
-              <Button disabled={action.busy || !password} onClick={() => void save(chosen)}>
-                {action.busy ? 'Guardando…' : 'Guardar método'}
-              </Button>
+              <div className="flex gap-2">
+                <Button disabled={action.busy || !password} onClick={() => void save(chosenState.id)}>
+                  {action.busy ? 'Guardando…' : 'Confirmar'}
+                </Button>
+                <Button variant="secondary" onClick={() => setChosen(null)}>
+                  Cancelar
+                </Button>
+              </div>
             </div>
           )}
           <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3">

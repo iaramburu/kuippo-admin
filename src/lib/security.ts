@@ -1,4 +1,4 @@
-import type { LoginSession, MfaMethod } from './types';
+import type { LoginSession, MfaMethod, Security } from './types';
 
 /** The three second factors, in the order they are offered. */
 export const MFA_METHODS: { id: MfaMethod; label: string; hint: string }[] = [
@@ -6,6 +6,45 @@ export const MFA_METHODS: { id: MfaMethod; label: string; hint: string }[] = [
   { id: 'totp', label: 'App de autenticación', hint: 'El código de una app como Google Authenticator, Microsoft Authenticator o FreeOTP.' },
   { id: 'webauthn', label: 'Llave de seguridad o biometría', hint: 'La huella, el rostro o el PIN de este dispositivo, o una llave física (YubiKey).' },
 ];
+
+/** How a method stands for the account: set up or not, and whether it is the one asked at a sign-in. */
+export interface MethodState {
+  id: MfaMethod;
+  label: string;
+  hint: string;
+  /** The e-mail always is; the app and the key once they are set up. */
+  configured: boolean;
+  /** The default: the one asked at a sign-in on a device that is not trusted. */
+  isDefault: boolean;
+  /** In words, what this means for the person. */
+  usage: string;
+}
+
+/** The three methods with what each one is for this account: the one in use, the ones that can be chosen instead, the ones not set up. */
+export function methodStates(security: Security): MethodState[] {
+  return MFA_METHODS.map((m) => {
+    const configured = m.id === 'email' || (m.id === 'totp' ? security.appConfigured : security.keyConfigured);
+    const isDefault = security.method === m.id;
+    const usage = isDefault
+      ? 'En uso: es el que se pide al iniciar sesión en un dispositivo nuevo o que no es de confianza.'
+      : configured
+        ? 'No es el predeterminado, pero lo puedes elegir en la pantalla de verificación si no puedes usar el predeterminado.'
+        : 'No se puede usar hasta que lo configures.';
+    return { ...m, configured, isDefault, usage };
+  });
+}
+
+/** The default method and how many others can be chosen instead, in one sentence. */
+export function methodSummary(security: Security): string {
+  const states = methodStates(security);
+  const current = states.find((s) => s.isDefault) ?? states[0]!;
+  const others = states.filter((s) => !s.isDefault && s.configured).length;
+  const tail =
+    others > 0
+      ? ` Si no puedes usarlo al iniciar sesión, en la pantalla de verificación puedes elegir ${others === 1 ? 'el otro método configurado' : 'otro de los métodos configurados'}.`
+      : ' Configura otro método para tener una alternativa si no puedes usar este al iniciar sesión.';
+  return `Método por defecto: ${current.label}.${tail}`;
+}
 
 /** "3 dispositivos de confianza", "1 dispositivo de confianza", "Ningún dispositivo de confianza". */
 export function trustedDevicesText(count: number): string {
