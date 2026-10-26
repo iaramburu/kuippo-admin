@@ -91,6 +91,10 @@ export const updateUser = (id: string, payload: ManagedUserPayload) => send<Mana
 export const closeUserSessions = async (id: string) => {
   await request(`/admin/users/${id}/sessions/revoke`, { method: 'POST' });
 };
+/** For a person who lost their phone or key: removes the authenticator app and the security keys, back to the code by e-mail. */
+export const resetUserMfa = async (id: string) => {
+  await request(`/admin/users/${id}/mfa/reset`, { method: 'POST' });
+};
 export const setUserPassword = async (id: string, newPassword: string) => {
   await request(`/admin/users/${id}/password`, { method: 'POST', body: JSON.stringify({ newPassword }) });
 };
@@ -100,6 +104,12 @@ export const setUserPassword = async (id: string, newPassword: string) => {
 export const revokeAllSessions = async () => {
   await request('/admin/sessions/revoke', { method: 'POST' });
 };
+
+// ---- two-step verification
+/** Whether the second factor is asked at every sign-in of every account. */
+export const fetchTwoStep = async () => (await get<{ twoStep: boolean }>('/admin/security')).twoStep;
+/** Switches it on or off for everybody (off: the password is enough, for when the e-mail with the code does not arrive). */
+export const setTwoStep = async (twoStep: boolean) => (await send<{ twoStep: boolean }>('PUT', '/admin/security', { twoStep })).twoStep;
 
 // ---- geography (public)
 export const fetchProvinces = async () => (await (await fetch(`${API_BASE}/geo/provinces`)).json()) as { code: string; name: string }[];

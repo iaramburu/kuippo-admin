@@ -14,6 +14,9 @@ export default defineConfig(({ mode }) => ({
   plugins: [...(mode === 'https' ? [basicSsl()] : []), react(), tailwindcss()],
   server: {
     port: 5174,
+    // (development names that point to this PC through the hosts file, e.g. app.kuippo.local and admin.kuippo.local: with
+    // their own host each site has its own Keycloak session, so two accounts can be signed in at once)
+    allowedHosts: ['.kuippo.local'],
     strictPort: true,
     proxy: {
       // Same-origin from the browser's point of view: drop `Origin` so the backend's CORS filter does not reject the

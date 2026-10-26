@@ -13,7 +13,7 @@ example `admin.kuippo.com`), apart from the customers' app (`kuippo-frontend`). 
   so the access token has `sub`).
 - The API's administration only accepts tokens whose `azp` is `admin-console` (`requireClient`, `KUIPPO_ADMIN_CLIENT_ID`), and the
   role `admin`. A token the app obtained with just a password is refused there (403).
-- The session lives in `localStorage` and is renewed with the refresh token while Keycloak's session lives (30 minutes without use, a year if the person ticked *Confío en este dispositivo* on Keycloak's page). `AuthGate` shows nothing until there is an administrator. **Usuarios > Sesiones** closes every session of every account (`POST /admin/sessions/revoke`), the administrator's own included. Each row of **Usuarios** has "Cerrar sesiones" for one account (`POST /admin/users/{id}/sessions/revoke`).
+- The session lives in `localStorage` and is renewed with the refresh token while Keycloak's session lives (30 minutes without use, a year if the person ticked *Confío en este dispositivo* on Keycloak's page). `AuthGate` shows nothing until there is an administrator. **Usuarios > Sesiones** closes every session of every account (`POST /admin/sessions/revoke`), the administrator's own included. Each row of **Usuarios** has "Cerrar sesiones" for one account (`POST /admin/users/{id}/sessions/revoke`) and "Restablecer verificación" (`POST /admin/users/{id}/mfa/reset`: removes the authenticator app and security keys of a person who lost them, back to the code by e-mail, trusted devices forgotten, sessions closed). Every sign-in, this one included, has the second factor of the account (e-mail by default; see the backend's CLAUDE.md).**Funciones** starts with the switch **Verificación en dos pasos** (`TwoStepCard`, `GET`/`PUT /admin/security`): off, the password is enough for every account, for when the e-mail with the code does not arrive; it is in the history ("desactivó/activó la verificación en dos pasos"). If nobody can sign in here, `keycloak-setup.sh mfa-off` does the same on the server.
 - Caddy serves it with a strict CSP (`default-src 'none'`, `script-src 'self'`, `connect-src` only the API and Keycloak): **no inline
   scripts**, no third-party scripts or fonts. Optionally restricted by address (`ADMIN_ALLOWED_IPS`).
 
@@ -47,6 +47,7 @@ kind of editor, a page here.
 - `npm run dev:https` serves it over HTTPS (throw-away certificate) and proxies `/api`, `/realms` and `/resources` on the same origin, to try it
   from a phone: see README (needs `KUIPPO_JWT_ANY_ISSUER_HOST=true` in the backend, `KC_PROXY_HEADERS=xforwarded` in the dev Keycloak and
   the `https://<ip>:5174` address in `ADMIN_DEV_ORIGIN`). `auth/oidc.ts` and `lib/api.ts` switch to same-origin when the page is HTTPS.
+- Dev names `admin.kuippo.local` / `app.kuippo.local` (hosts file; `server.allowedHosts` accepts `.kuippo.local`) give each site its own Keycloak session, so two accounts can be signed in at once; see `kuippo-backend/deploy/README.md`.
 - `VITE_API_BASE_URL` and `VITE_OIDC_AUTHORITY` default to the same host on ports 8080 and 8180 (production builds set them).
 - The deploy workflow is manual (`workflow_dispatch`): backend first, then this.
 

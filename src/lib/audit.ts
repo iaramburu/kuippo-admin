@@ -8,6 +8,7 @@ const ACTIONS: Record<string, string> = {
   update: 'modificó',
   password: 'cambió la contraseña de',
   'revoke-sessions': 'cerró todas las sesiones',
+  'two-step': 'cambió la verificación en dos pasos',
 };
 
 export const SCOPES: Record<string, string> = {
@@ -24,6 +25,7 @@ export const SCOPES: Record<string, string> = {
 export function describeEntry(entry: AuditEntry, parameters: Parameter[]): string {
   const action = ACTIONS[entry.action] ?? entry.action;
   if (entry.action === 'revoke-sessions') return `${entry.actorEmail || 'Alguien'} ${entry.scope === 'users' ? 'cerró las sesiones de una cuenta' : action}`;
+  if (entry.action === 'two-step') return `${entry.actorEmail || 'Alguien'} ${entry.after === false ? 'desactivó' : 'activó'} la verificación en dos pasos de todas las cuentas`;
   const scope = SCOPES[entry.scope] ?? entry.scope;
   let what = scope;
   if (entry.scope === 'social-security') what = `${scope} · tabla de ${entry.key}`;

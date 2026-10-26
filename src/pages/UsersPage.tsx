@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Button, errorText, Field, formatDateTime, inputClass, Notice, Page, Panel, useAction } from '../components/ui';
 import { userManager } from '../auth/oidc';
 import { useSessionUser } from '../auth/AuthGate';
-import { closeUserSessions, createUser, fetchMunicipalities, fetchProvinces, fetchUsers, revokeAllSessions, setUserPassword, updateUser } from '../lib/api';
+import { closeUserSessions, createUser, fetchMunicipalities, fetchProvinces, fetchUsers, resetUserMfa, revokeAllSessions, setUserPassword, updateUser } from '../lib/api';
 import type { ManagedUser, ManagedUserPayload } from '../lib/types';
 
 const ROLES: { id: string; label: string; hint: string }[] = [
@@ -75,6 +75,33 @@ function CloseSessionsButton({ user }: { user: ManagedUser }) {
         Cerrar sesiones
       </Button>
       {action.message && <span role={action.message.kind === 'error' ? 'alert' : 'status'} className={`text-xs ${action.message.kind === 'error' ? 'text-red-700' : 'text-green-700'}`}>{action.message.kind === 'error' ? action.message.text : 'Sesiones cerradas'}</span>}
+    </>
+  );
+}
+
+/** "Restablecer verificación": the account lost its phone or key; it goes back to the code by e-mail and signs in again everywhere. */
+function ResetMfaButton({ user }: { user: ManagedUser }) {
+  const action = useAction();
+  const me = useSessionUser();
+  const own = me?.profile.sub === user.id;
+  const reset = () => {
+    const who = fullName(user);
+    const warning = own ? ' Es tu propia cuenta: tendrás que volver a entrar.' : '';
+    if (!window.confirm(`Se quitarán la app de autenticación y las llaves de seguridad de ${who}, se olvidarán sus dispositivos de confianza y se cerrarán sus sesiones. Volverá a recibir el código por correo.${warning} ¿Continuar?`)) return;
+    void action.run(async () => {
+      await resetUserMfa(user.id);
+      if (own) {
+        await userManager.removeUser();
+        window.setTimeout(() => window.location.assign('/'), 1200);
+      }
+    }, `Verificación de ${who} restablecida.`);
+  };
+  return (
+    <>
+      <Button variant="secondary" aria-label={`Restablecer la verificación en dos pasos de ${fullName(user)}`} disabled={action.busy} onClick={reset}>
+        Restablecer verificación
+      </Button>
+      {action.message && <span role={action.message.kind === 'error' ? 'alert' : 'status'} className={`text-xs ${action.message.kind === 'error' ? 'text-red-700' : 'text-green-700'}`}>{action.message.kind === 'error' ? action.message.text : 'Restablecida'}</span>}
     </>
   );
 }
@@ -256,6 +283,7 @@ export function UsersPage() {
                           Contraseña
                         </Button>
                         <CloseSessionsButton user={u} />
+                        <ResetMfaButton user={u} />
                       </div>
                     </td>
                   </tr>

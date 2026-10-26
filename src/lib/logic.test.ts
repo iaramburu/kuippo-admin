@@ -97,6 +97,11 @@ describe('audit and claims', () => {
     const revoked = { ...entry, action: 'revoke-sessions', scope: 'security', key: 'revoked-before' };
     expect(describeEntry(revoked, [])).toBe('ana@kuippo.com cerró todas las sesiones');
   });
+  it('says who switched the second factor off or on', () => {
+    const off = { ...entry, action: 'two-step', scope: 'security', key: 'two-step', before: true, after: false };
+    expect(describeEntry(off, [])).toBe('ana@kuippo.com desactivó la verificación en dos pasos de todas las cuentas');
+    expect(describeEntry({ ...off, before: false, after: true }, [])).toBe('ana@kuippo.com activó la verificación en dos pasos de todas las cuentas');
+  });
   it('says whose sessions were closed', () => {
     const one = { ...entry, action: 'revoke-sessions', scope: 'users', key: 'some-id' };
     expect(describeEntry(one, [])).toBe('ana@kuippo.com cerró las sesiones de una cuenta');
