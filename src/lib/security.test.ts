@@ -37,44 +37,45 @@ describe('security helpers', () => {
   });
 
   it('checks a new password before sending it', () => {
-    expect(passwordProblem('', 'abcdefgh', 'abcdefgh')).toMatch(/actual/);
-    expect(passwordProblem('old-password', 'short', 'short')).toMatch(/8 caracteres/);
+    expect(passwordProblem('', 'abcdefghijkl', 'abcdefghijkl')).toMatch(/actual/);
+    expect(passwordProblem('old-password', 'short', 'short')).toMatch(/12 caracteres/);
+    expect(passwordProblem('old-password', 'eleven-char', 'eleven-char')).toMatch(/12 caracteres/);
     expect(passwordProblem('old-password', 'old-password', 'old-password')).toMatch(/distinta/);
     expect(passwordProblem('old-password', 'new-password', 'other-password')).toMatch(/no coinciden/);
     expect(passwordProblem('old-password', 'new-password', 'new-password')).toBeNull();
   });
 });
 
-describe('methodStates', () => {
-  const only = { method: 'email', appConfigured: false, keyConfigured: false, trustedDevices: 0 } as const;
+describe('methodStates (the administration never uses the e-mail)', () => {
+  const none = { method: 'email', appConfigured: false, keyConfigured: false, trustedDevices: 0 } as const;
+  const ids = (security: Parameters<typeof methodStates>[0]) => methodStates(security).map((s) => s.id);
   const state = (security: Parameters<typeof methodStates>[0], id: string) => methodStates(security).find((s) => s.id === id)!;
 
-  it('the e-mail is always set up and, by default, the one in use', () => {
-    const email = state(only, 'email');
-    expect(email.configured).toBe(true);
-    expect(email.isDefault).toBe(true);
-    expect(email.usage).toMatch(/^En uso/);
+  it('offers only the app and the key', () => {
+    expect(ids(none)).toEqual(['totp', 'webauthn']);
   });
 
-  it('says which are not set up', () => {
-    expect(state(only, 'totp').configured).toBe(false);
-    expect(state(only, 'webauthn').configured).toBe(false);
-    expect(state(only, 'totp').usage).toMatch(/hasta que lo configures/);
+  it('with nothing set up, nothing is in use and it says what is required', () => {
+    expect(methodStates(none).some((s) => s.isDefault)).toBe(false);
+    expect(state(none, 'totp').usage).toMatch(/hasta que lo configures/);
+    expect(methodSummary(none)).toMatch(/exige una app de autenticación o una llave/);
   });
 
-  it('says which can be chosen instead and which one is in use', () => {
-    const all = { method: 'webauthn', appConfigured: true, keyConfigured: true, trustedDevices: 1 } as const;
-    expect(methodStates(all).filter((s) => s.isDefault).map((s) => s.id)).toEqual(['webauthn']);
-    expect(state(all, 'email').usage).toMatch(/lo puedes elegir en la pantalla de verificación/);
-    expect(state(all, 'totp').configured).toBe(true);
-    expect(state(all, 'totp').isDefault).toBe(false);
+  it('an account whose default is still the e-mail uses the first method that is set up', () => {
+    const app = { method: 'email', appConfigured: true, keyConfigured: false, trustedDevices: 0 } as const;
+    expect(methodStates(app).filter((s) => s.isDefault).map((s) => s.id)).toEqual(['totp']);
+    const both = { method: 'email', appConfigured: true, keyConfigured: true, trustedDevices: 0 } as const;
+    expect(methodStates(both).filter((s) => s.isDefault).map((s) => s.id)).toEqual(['totp']);
+    expect(state(both, 'webauthn').usage).toMatch(/lo puedes elegir en la pantalla de verificación/);
   });
-});
 
-describe('methodSummary', () => {
-  it('names the default and the way out', () => {
-    expect(methodSummary({ method: 'email', appConfigured: false, keyConfigured: false, trustedDevices: 0 })).toMatch(/Configura otro método/);
-    expect(methodSummary({ method: 'totp', appConfigured: true, keyConfigured: false, trustedDevices: 0 })).toMatch(/Método por defecto: App de autenticación\..*el otro método configurado/);
-    expect(methodSummary({ method: 'email', appConfigured: true, keyConfigured: true, trustedDevices: 0 })).toMatch(/otro de los métodos configurados/);
+  it('keeps the default the account chose', () => {
+    const key = { method: 'webauthn', appConfigured: true, keyConfigured: true, trustedDevices: 0 } as const;
+    expect(methodStates(key).filter((s) => s.isDefault).map((s) => s.id)).toEqual(['webauthn']);
+    expect(methodSummary(key)).toMatch(/Método por defecto: Llave de seguridad o biometría\..*el otro método configurado/);
+  });
+
+  it('suggests a second method when there is only one', () => {
+    expect(methodSummary({ method: 'totp', appConfigured: true, keyConfigured: false, trustedDevices: 0 })).toMatch(/Configura también el otro método/);
   });
 });

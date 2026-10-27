@@ -59,6 +59,9 @@ kind of editor, a page here.
 ## Updates
 The site updates itself when there is a new deployment, with no notice: the build writes `/version.json` (`vite.config.ts`, the commit in CI) and `components/AutoUpdate.tsx` + `lib/autoUpdate.ts` reload the page at a safe moment (on opening, coming back, moving to another section or leaving the tab; never after something was written on the section being viewed; once per version) when it differs from the running build. The session lives in the browser, so the person stays signed in. Caddy serves `/index.html` and `/version.json` with `no-cache`.
 
+## Sessions and the second factor
+Renewals are one at a time and between tabs (`auth/renewals.ts`; the refresh token works once) and a refused renewal goes back to the sign-in. The administration never uses the e-mail: `methodStates` in `lib/security.ts` offers only the app and the key, and the API refuses the e-mail to an administrator; an account without them is asked to set up the app when it signs in. A trusted device here lasts 60 days (the app's, 120). The minimum password is 12 (`MIN_PASSWORD_LENGTH`).
+
 ## Conventions
 - Spanish text for people; English code and comments. Pages are components rendered by `App` (never call a page as a function:
   its hooks would become the app's).

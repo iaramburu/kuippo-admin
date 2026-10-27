@@ -5,6 +5,7 @@ import { userManager } from '../auth/oidc';
 import { useSessionUser } from '../auth/AuthGate';
 import { closeUserSessions, createUser, fetchMunicipalities, fetchProvinces, fetchUsers, resetUserMfa, revokeAllSessions, setUserPassword, updateUser } from '../lib/api';
 import type { ManagedUser, ManagedUserPayload } from '../lib/types';
+import { MIN_PASSWORD_LENGTH } from '../lib/security';
 
 const ROLES: { id: string; label: string; hint: string }[] = [
   { id: 'user', label: 'Usuario', hint: 'Usa todas las funciones de Kuippo: facturas, gastos, impuestos y contactos.' },
@@ -112,11 +113,11 @@ function PasswordForm({ user, onClose }: { user: ManagedUser; onClose: () => voi
   return (
     <Panel title={`Nueva contraseña de ${fullName(user)}`} subtitle="Se cierran todas sus sesiones abiertas. La contraseña no se guarda en ningún registro.">
       <div className="max-w-sm space-y-3">
-        <Field label="Contraseña nueva (de 8 a 128 caracteres)" htmlFor="new-password">
+        <Field label={`Contraseña nueva (de ${MIN_PASSWORD_LENGTH} a 128 caracteres)`} htmlFor="new-password">
           <input id="new-password" type="password" autoComplete="new-password" className={inputClass} value={password} onChange={(e) => setPassword(e.target.value)} />
         </Field>
         <div className="flex flex-wrap items-center gap-2">
-          <Button disabled={password.length < 8 || action.busy} onClick={() => void action.run(async () => { await setUserPassword(user.id, password); setPassword(''); }, 'Contraseña cambiada y sesiones cerradas.')}>
+          <Button disabled={password.length < MIN_PASSWORD_LENGTH || action.busy} onClick={() => void action.run(async () => { await setUserPassword(user.id, password); setPassword(''); }, 'Contraseña cambiada y sesiones cerradas.')}>
             Cambiar la contraseña
           </Button>
           <Button variant="secondary" onClick={onClose}>
@@ -186,7 +187,7 @@ function UserForm({ user, onClose }: { user: ManagedUser | null; onClose: () => 
         </Field>
         {text('phone', 'Teléfono')}
         {creating && (
-          <Field label="Contraseña inicial (de 8 a 128 caracteres)" htmlFor="u-password">
+          <Field label={`Contraseña inicial (de ${MIN_PASSWORD_LENGTH} a 128 caracteres)`} htmlFor="u-password">
             <input id="u-password" type="password" autoComplete="new-password" className={inputClass} value={form.password ?? ''} onChange={(e) => set('password', e.target.value)} />
           </Field>
         )}

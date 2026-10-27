@@ -1,4 +1,5 @@
-import { UserManager, WebStorageStateStore, type User } from 'oidc-client-ts';
+import { ErrorResponse, UserManager, WebStorageStateStore, type User } from 'oidc-client-ts';
+import { serializeRenewals } from './renewals';
 
 // The back office signs in through Keycloak's own page (authorization code with PKCE), as the client "admin-console".
 // That client is bound to a sign-in flow that demands the second factor, and it is the only one the API's administration
@@ -32,6 +33,15 @@ export const userManager = new UserManager({
   scope: 'openid profile email',
   userStore: new WebStorageStateStore({ store: window.localStorage }),
   automaticSilentRenew: true,
+});
+// (a refresh token works once: see auth/renewals.ts)
+serializeRenewals(userManager);
+// The automatic renewal insists every second when the server refuses it (the session was closed from another device, or the refresh
+// token is no longer valid). A refusal means the session is over: go back to the sign-in once, instead of insisting.
+userManager.events.addSilentRenewError(async (error) => {
+  if (!(error instanceof ErrorResponse)) return; // (a network failure is retried by itself)
+  await userManager.removeUser();
+  window.location.assign('/');
 });
 
 let starting: Promise<User | null> | undefined;

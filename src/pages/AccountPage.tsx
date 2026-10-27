@@ -17,7 +17,7 @@ import {
   setMfaMethod,
   updateAccount,
 } from '../lib/api';
-import { describeSession, exportFileName, lastUseText, methodStates, methodSummary, orderSessions, passwordProblem, trustedDevicesText } from '../lib/security';
+import { describeSession, exportFileName, lastUseText, methodStates, methodSummary, MIN_PASSWORD_LENGTH, orderSessions, passwordProblem, trustedDevicesText } from '../lib/security';
 import type { Account, AccountUpdate, MfaMethod } from '../lib/types';
 
 const toForm = (a: Account): AccountUpdate => ({
@@ -135,7 +135,7 @@ function PasswordCard() {
         <Field label="Contraseña actual" htmlFor="pw-current">
           <input id="pw-current" type="password" autoComplete="current-password" className={inputClass} value={current} onChange={(e) => setCurrent(e.target.value)} />
         </Field>
-        <Field label="Nueva contraseña (mínimo 8 caracteres)" htmlFor="pw-new">
+        <Field label={`Nueva contraseña (mínimo ${MIN_PASSWORD_LENGTH} caracteres)`} htmlFor="pw-new">
           <input id="pw-new" type="password" autoComplete="new-password" className={inputClass} value={next} onChange={(e) => setNext(e.target.value)} />
         </Field>
         <Field label="Repite la nueva contraseña" htmlFor="pw-repeat">

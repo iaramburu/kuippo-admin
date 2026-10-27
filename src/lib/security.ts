@@ -20,29 +20,37 @@ export interface MethodState {
   usage: string;
 }
 
-/** The three methods with what each one is for this account: the one in use, the ones that can be chosen instead, the ones not set up. */
+/**
+ * The methods of this account with what each one is for it: the one in use, the ones that can be chosen instead, the ones not set up.
+ * The administration (this site) never uses the e-mail: its methods are the app and the key, and when the account's default is still
+ * the e-mail the first one that is set up is the one in use.
+ */
 export function methodStates(security: Security): MethodState[] {
-  return MFA_METHODS.map((m) => {
-    const configured = m.id === 'email' || (m.id === 'totp' ? security.appConfigured : security.keyConfigured);
-    const isDefault = security.method === m.id;
+  const configured = (id: MfaMethod) => id === 'email' || (id === 'totp' ? security.appConfigured : security.keyConfigured);
+  const candidates = MFA_METHODS.filter((m) => m.id !== 'email');
+  const inUse = candidates.find((m) => m.id === security.method && configured(m.id)) ?? candidates.find((m) => configured(m.id));
+  return candidates.map((m) => {
+    const isConfigured = configured(m.id);
+    const isDefault = inUse?.id === m.id;
     const usage = isDefault
       ? 'En uso: es el que se pide al iniciar sesión en un dispositivo nuevo o que no es de confianza.'
-      : configured
+      : isConfigured
         ? 'No es el predeterminado, pero lo puedes elegir en la pantalla de verificación si no puedes usar el predeterminado.'
         : 'No se puede usar hasta que lo configures.';
-    return { ...m, configured, isDefault, usage };
+    return { ...m, configured: isConfigured, isDefault, usage };
   });
 }
 
-/** The default method and how many others can be chosen instead, in one sentence. */
+/** What the person has to know about their methods, in one sentence. */
 export function methodSummary(security: Security): string {
   const states = methodStates(security);
-  const current = states.find((s) => s.isDefault) ?? states[0]!;
+  const current = states.find((s) => s.isDefault);
+  if (!current) return 'La administración exige una app de autenticación o una llave de seguridad: configura una aquí, o se te pedirá al iniciar sesión. El correo no se usa en la administración.';
   const others = states.filter((s) => !s.isDefault && s.configured).length;
   const tail =
     others > 0
-      ? ` Si no puedes usarlo al iniciar sesión, en la pantalla de verificación puedes elegir ${others === 1 ? 'el otro método configurado' : 'otro de los métodos configurados'}.`
-      : ' Configura otro método para tener una alternativa si no puedes usar este al iniciar sesión.';
+      ? ' Si no puedes usarlo al iniciar sesión, en la pantalla de verificación puedes elegir el otro método configurado.'
+      : ' Configura también el otro método para tener una alternativa si no puedes usar este al iniciar sesión.';
   return `Método por defecto: ${current.label}.${tail}`;
 }
 
@@ -76,10 +84,13 @@ export function exportFileName(date: Date): string {
   return `kuippo-mis-datos-${date.toISOString().slice(0, 10)}.json`;
 }
 
+/** The shortest password: the same as the realm's policy (length(12)) and the API's, which also refuse common passwords. */
+export const MIN_PASSWORD_LENGTH = 12;
+
 /** What is wrong with a new password, or null when it can be sent. */
 export function passwordProblem(current: string, next: string, repeated: string): string | null {
   if (!current) return 'Indica tu contraseña actual.';
-  if (next.length < 8) return 'La nueva contraseña necesita 8 caracteres como mínimo.';
+  if (next.length < MIN_PASSWORD_LENGTH) return `La nueva contraseña necesita ${MIN_PASSWORD_LENGTH} caracteres como mínimo.`;
   if (next.length > 128) return 'La nueva contraseña admite 128 caracteres como máximo.';
   if (next === current) return 'La nueva contraseña debe ser distinta de la actual.';
   if (next !== repeated) return 'Las contraseñas no coinciden.';

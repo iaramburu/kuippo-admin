@@ -1,0 +1,23 @@
+name: Security scans
+
+# Known vulnerabilities in the dependencies that end up in the build. Weekly, when the dependencies change, and when asked.
+on:
+  schedule:
+    - cron: "37 5 * * 1"
+  pull_request:
+    paths: ["package.json", "package-lock.json"]
+  workflow_dispatch:
+
+# Only what the job reads
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 22
+      - run: npm audit --omit=dev --audit-level=high
