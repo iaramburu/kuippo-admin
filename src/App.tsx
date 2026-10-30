@@ -7,6 +7,7 @@ import { FlagsPage } from './pages/FlagsPage';
 import { HistoryPage } from './pages/HistoryPage';
 import { LimitsPage } from './pages/LimitsPage';
 import { AccountPage } from './pages/AccountPage';
+import { AdvisorPage } from './pages/AdvisorPage';
 import { MailPage } from './pages/MailPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { SocialSecurityPage } from './pages/SocialSecurityPage';
@@ -18,6 +19,7 @@ const SECTIONS: { path: string; label: string; view: () => ReactNode }[] = [
   { path: '/calendar', label: 'Calendario fiscal', view: CalendarPage },
   { path: '/limits', label: 'Límites de uso', view: LimitsPage },
   { path: '/flags', label: 'Funciones', view: FlagsPage },
+  { path: '/advisor', label: 'Asesor', view: AdvisorPage },
   { path: '/mail', label: 'Plantillas de correo', view: MailPage },
   { path: '/history', label: 'Historial', view: HistoryPage },
 ];

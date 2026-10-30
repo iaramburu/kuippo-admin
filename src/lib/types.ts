@@ -143,3 +143,52 @@ export interface LoginSession {
   /** The session of the device that asks. */
   current: boolean;
 }
+
+// ---- the advisor (local installations only)
+
+export type SourceKind = 'boe-xml' | 'html' | 'pdf';
+
+/** One official source the advisor reads, as it is written in sources.yaml. */
+export interface AdvisorSource {
+  id: string;
+  name: string;
+  authority: string;
+  kind: SourceKind;
+  url?: string;
+  boeId?: string;
+  topics: string[];
+  refreshDays: number;
+}
+
+export interface AdvisorSourcesConfig {
+  allowedHosts: string[];
+  sources: AdvisorSource[];
+}
+
+/** What the advisor says about itself: whether this installation has the local tools, and the sources. */
+export interface AdvisorTools extends Partial<AdvisorSourcesConfig> {
+  localTools: boolean;
+  /** The list was edited here, not the one that ships with the code. */
+  customized?: boolean;
+}
+
+/** How fresh the index of a source is. */
+export interface SourceStatus {
+  id: string;
+  name: string;
+  authority: string;
+  topics: string[];
+  chunks: number;
+  lastIngestedAt?: string | null;
+  stale: boolean;
+}
+
+export type RunOutcome = 'ADDED' | 'UPDATED' | 'UNCHANGED' | 'FAILED';
+
+export interface IngestionRun {
+  id: number;
+  startedAt: string;
+  finishedAt?: string | null;
+  status: 'RUNNING' | 'SUCCEEDED' | 'FAILED';
+  results: { sourceId: string; outcome: RunOutcome; chunks: number; error?: string | null }[];
+}

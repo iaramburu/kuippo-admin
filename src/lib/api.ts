@@ -12,6 +12,10 @@ import type {
   MfaMethod,
   Parameter,
   Security,
+  AdvisorSourcesConfig,
+  AdvisorTools,
+  IngestionRun,
+  SourceStatus,
 } from './types';
 
 // Served over HTTPS (`npm run dev:https`) the dev server proxies the API, so it is reached on the same origin.
@@ -47,12 +51,12 @@ async function toError(response: Response): Promise<ApiError> {
   }
 }
 
-async function request(path: string, init: RequestInit = {}): Promise<Response> {
+async function request(path: string, init: RequestInit = {}, base = API_BASE): Promise<Response> {
   const send = async (token: string | undefined) => {
     const headers = new Headers(init.headers);
     if (token) headers.set('Authorization', `Bearer ${token}`);
     if (init.body !== undefined) headers.set('Content-Type', 'application/json');
-    return fetch(`${API_BASE}${path}`, { ...init, headers });
+    return fetch(`${base}${path}`, { ...init, headers });
   };
   let response = await send((await userManager.getUser())?.access_token);
   if (response.status === 401) {
@@ -143,3 +147,20 @@ export const setTwoStep = async (twoStep: boolean) => (await send<{ twoStep: boo
 export const fetchProvinces = async () => (await (await fetch(`${API_BASE}/geo/provinces`)).json()) as { code: string; name: string }[];
 export const fetchMunicipalities = async (code: string) =>
   (await (await fetch(`${API_BASE}/geo/provinces/${code}/municipalities`)).json()) as string[];
+
+// ---- the advisor: its own service, which only a local installation lets this site manage
+// (over HTTPS the dev server proxies it on the same origin; plain HTTP calls the service's port)
+const ADVISOR_BASE =
+  import.meta.env.VITE_ADVISOR_BASE_URL || (window.location.protocol === 'https:' ? '/api/v1' : `${window.location.protocol}//${window.location.hostname}:8090/api/v1`);
+
+const advisorGet = async <T>(path: string) => (await (await request(path, {}, ADVISOR_BASE)).json()) as T;
+const advisorSend = async <T>(method: string, path: string, body?: unknown) =>
+  (await (await request(path, { method, body: body === undefined ? undefined : JSON.stringify(body) }, ADVISOR_BASE)).json()) as T;
+
+export const fetchAdvisorTools = () => advisorGet<AdvisorTools>('/admin/advisor');
+export const saveAdvisorSources = (config: AdvisorSourcesConfig) => advisorSend<AdvisorTools>('PUT', '/admin/advisor/sources', config);
+export const resetAdvisorSources = () => advisorSend<AdvisorTools>('DELETE', '/admin/advisor/sources');
+export const fetchSourceStatus = () => advisorGet<SourceStatus[]>('/advisor/sources');
+export const fetchIngestionRuns = () => advisorGet<IngestionRun[]>('/admin/ingestion/runs');
+/** Reads the sources (all, or the ids given) and creates their vectors; runs in the background. */
+export const startIngestion = (sourceIds: string[], force: boolean) => advisorSend<IngestionRun>('POST', '/admin/ingestion/runs', { sourceIds, force });

@@ -35,6 +35,8 @@ function versionFile(): Plugin {
 // started with KC_PROXY_HEADERS=xforwarded) so the sign-in page it builds points back at this address.
 const BACKEND = process.env.KUIPPO_BACKEND_URL ?? 'http://localhost:8080';
 const KEYCLOAK = process.env.KUIPPO_KEYCLOAK_URL ?? 'http://localhost:8180';
+// The advisor is its own service; its administration lives under /api/v1/admin/advisor and /api/v1/admin/ingestion.
+const ADVISOR = process.env.KUIPPO_ADVISOR_URL ?? 'http://localhost:8090';
 
 export default defineConfig(({ mode }) => ({
   define: { __APP_VERSION__: JSON.stringify(VERSION) },
@@ -46,6 +48,12 @@ export default defineConfig(({ mode }) => ({
     allowedHosts: ['.kuippo.local'],
     strictPort: true,
     proxy: {
+      ...Object.fromEntries(
+        ['/api/v1/admin/advisor', '/api/v1/admin/ingestion', '/api/v1/advisor'].map((path) => [
+          path,
+          { target: ADVISOR, configure: (proxy: { on: (event: string, handler: (req: { removeHeader: (name: string) => void }) => void) => void }) => proxy.on('proxyReq', (proxyReq) => proxyReq.removeHeader('origin')) },
+        ]),
+      ),
       // Same-origin from the browser's point of view: drop `Origin` so the backend's CORS filter does not reject the
       // page's own LAN address (https://<ip>:5174) as a foreign origin.
       '/api': {
